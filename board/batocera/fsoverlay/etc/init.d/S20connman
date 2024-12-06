@@ -28,8 +28,9 @@ settingsWlan="$(/usr/bin/batocera-settings-get -f "$BATOCONF" wifi.enabled)"
 # lets the user allow for dynamic hostname configuration from DHCP, by
 # setting the system.hostname setting to a blank empty string.
 batocera_hostname() {
-    echo "$(date -u): starting initial hostname configuraton" > /tmp/hostname.log
+    echo "$(date -u): starting initial hostname configuration" > /tmp/hostname.log
     settings_hostname="$(/usr/bin/batocera-settings-get -f "$BATOCONF" system.hostname)"
+
     if [ -n "$settings_hostname" ]; then
         echo "Setting initial hostname from system.hostname: ${settings_hostname}" >> /tmp/hostname.log
         hostname="$settings_hostname"
@@ -43,6 +44,7 @@ batocera_hostname() {
 
 # configure wifi files, always
 batocera_wifi_configure() {
+    echo "    Wifi Configure: Device $1" >> /tmp/S20connman.log
     X=$1
 
     settings_hide=false; settings_name="${X}"
@@ -77,21 +79,43 @@ batocera_wifi_configure() {
 }
 
 wifi_configure_all() {
+    echo "    Wifi Configure All" >> /tmp/S20connman.log
+
     for i in 1 2 3 .hidden; do
         batocera_wifi_configure "$i"
     done
 }
 
+
 wifi_enable() {
+    echo "    Wifi Enable" >> /tmp/S20connman.log
+
     settingsCountry="$(/usr/bin/batocera-settings-get -f "$BATOCONF" wifi.country)"
+    echo "        Country: $settingsCountry" >> /tmp/S20connman.log
+
     [ -n "$settingsCountry" ] && /usr/sbin/iw reg set "$settingsCountry"
 
-    connmanctl enable wifi 2>/dev/null
-    connmanctl scan   wifi 2>/dev/null
+
+    for i in { 1..10 }
+    do
+        echo "        Calling 'connmanctl enable wifi'" >> /tmp/S20connman.log
+        connmanctl enable wifi 2>/tmp/S20connman.log
+        echo "        Calling 'connmanctl scan wifi'" >> /tmp/S20connman.log
+        connmanctl scan   wifi 2>/tmp/connmanctl_scan_wifi.log
+	cat /tmp/connmanctl_scan_wifi.log >> /tmp/S20connman.log
+
+	if grep -q "wifi: No carrier" /tmp/connmanctl_scan_wifi.log ; then
+            echo "        No CARRIER.  Retrying ..." >> /tmp/S20connman.log
+	else
+	    break
+	fi
+    done
 }
 
 wifi_disable() {
-    connmanctl disable wifi 2>/dev/null
+    echo "    Wifi Disable" >> /tmp/S20connman.log
+    echo "        Calling 'connmanctl disable wifi'" >> /tmp/S20connman.log
+    connmanctl disable wifi 2>/tmp/S20connman.log
 }
 
 case "$1" in
@@ -101,8 +125,10 @@ case "$1" in
         printf "Starting connman: "
         start-stop-daemon -S -q -m -b -p /var/run/connmand.pid --exec /usr/sbin/connmand -- -n -r
 
+
         for i in $(seq 1 20); do
-            if connmanctl state 2>/dev/null | grep -qE '^[ ]*State[ ]='; then
+            echo "    Calling 'connmanctl state'" >> /tmp/S20connman.log
+            if connmanctl state 2>/tmp/S20connman.log | tee -a /tmp/S20connman.log | grep -qE '^[ ]*State[ ]='; then
                 break
             fi
             sleep 0.25
@@ -111,8 +137,10 @@ case "$1" in
 
         if [ "$settingsWlan" = "1" ];then
             # Detach the wifi enable process
+            echo "    enabling wifi [detached]" >> /tmp/S20connman.log
             wifi_enable &
         else
+            echo "    disabling wifi" >> /tmp/S20connman.log
             wifi_disable
         fi
 
