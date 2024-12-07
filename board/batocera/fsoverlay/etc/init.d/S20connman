@@ -3,6 +3,11 @@
 ### choose configuration file
 BATOCONF="/userdata/system/batocera.conf"
 BOOTCONF="/boot/batocera-boot.conf"
+DEBUGLOG=/userdata/system/logs/S20connman.log
+
+#  add -d to DEBUG_MODE to put connman into debug mode, you'll also need to adjust syslog
+#  have connman log to syslog.
+DEBUG_MODE=
 
 # if /userdata is not yet available
 if ! [ -f "$BATOCONF" ]; then
@@ -44,7 +49,6 @@ batocera_hostname() {
 
 # configure wifi files, always
 batocera_wifi_configure() {
-    echo "    Wifi Configure: Device $1" >> /tmp/S20connman.log
     X=$1
 
     settings_hide=false; settings_name="${X}"
@@ -79,43 +83,90 @@ batocera_wifi_configure() {
 }
 
 wifi_configure_all() {
-    echo "    Wifi Configure All" >> /tmp/S20connman.log
+    echo "    Wifi Configure All" >> $DEBUGLOG
 
     for i in 1 2 3 .hidden; do
         batocera_wifi_configure "$i"
     done
 }
 
+max_connection_wait=3
+wait_for_connection() {
+    echo "    Waiting for connection" | tee -a $DEBUGLOG
+    for n in `seq 1 $max_connection_wait`; do
+        echo "    Checking connmanctl state [$n of $max_connection_wait]" | tee -a $DEBUGLOG
+        connmanctl state > /tmp/connmanctl_state.log
+        
+        if grep -q "State = idle" /tmp/connmanctl_state.log ; then
+            echo "        Idle." | tee -a /tmp/S20connman.log
+            cat /tmp/connmanctl_state.log | tee -a $DEBUGLOG
+        else
+            echo "        Not idle" | tee -a /tmp/S20connman.log
+            cat /tmp/connmanctl_state.log | tee -a $DEBUGLOG
+            break
+        fi
+        sleep 1
+    done
+    
+    return 0
+}
+
+# These variables are only needed by the disabled code below
+ENABLE_RETRY_COUNT=1
+DELAY_ENABLE_TO_SCAN=1
 
 wifi_enable() {
-    echo "    Wifi Enable" >> /tmp/S20connman.log
+    echo "    Wifi Enable" >> $DEBUGLOG
 
     settingsCountry="$(/usr/bin/batocera-settings-get -f "$BATOCONF" wifi.country)"
-    echo "        Country: $settingsCountry" >> /tmp/S20connman.log
-
     [ -n "$settingsCountry" ] && /usr/sbin/iw reg set "$settingsCountry"
+        
+    echo "        Country: $settingsCountry" >> $DEBUGLOG
+    
+    #  Extra 'enable wifi' to deal with the 'No Carrier' error that can occur on 5Ghz
+    connmanctl enable wifi 2>> $DEBUGLOG
+    sleep 1
+    connmanctl enable wifi 2>> $DEBUGLOG
+    sleep 1
+    
+    #  We redirect the output of scan wifi because we need to check for a NO CARRIER error.
+    connmanctl scan wifi > /tmp/connmanctl_scan_wifi.log 2> /tmp/connmanctl_scan_wifi.err
+    if grep -q "wifi: No carrier" /tmp/connmanctl_scan_wifi.err ; then
+        echo "NO CARRIER:  Restart Daemon" >> $DEBUGLOG
+    fi
+    
+    #  This was an attempt to recover from the No Carrier, but it seems that the double
+    #  'enable wifi' above either resolves that problem or greatly reduces its occurence.
+#    for i in `seq 1 $ENABLE_RETRY_COUNT`; do
+#        echo "        Calling 'connmanctl enable wifi'" | tee -a $DEBUGLOG
+#        connmanctl enable wifi 2>> $DEBUGLOG
+#        sleep $DELAY_ENABLE_TO_SCAN
+#        echo "        Calling 'connmanctl scan wifi'" | tee -a $DEBUGLOG
+#        connmanctl scan wifi > /tmp/connmanctl_scan_wifi.log 2> /tmp/connmanctl_scan_wifi.err
+        
+#	cat /tmp/connmanctl_scan_wifi.log >> $DEBUGLOG 2>> $DEBUGLOG
 
-
-    for i in { 1..10 }
-    do
-        echo "        Calling 'connmanctl enable wifi'" >> /tmp/S20connman.log
-        connmanctl enable wifi 2>/tmp/S20connman.log
-        echo "        Calling 'connmanctl scan wifi'" >> /tmp/S20connman.log
-        connmanctl scan   wifi 2>/tmp/connmanctl_scan_wifi.log
-	cat /tmp/connmanctl_scan_wifi.log >> /tmp/S20connman.log
-
-	if grep -q "wifi: No carrier" /tmp/connmanctl_scan_wifi.log ; then
-            echo "        No CARRIER.  Retrying ..." >> /tmp/S20connman.log
-	else
-	    break
-	fi
-    done
+#	if grep -q "wifi: No carrier" /tmp/connmanctl_scan_wifi.err ; then
+#            echo "        No CARRIER ..." | tee -a $DEBUGLOG
+#            echo "        Disabling Wifi ..." | tee -a $DEBUGLOG
+#            connmanctl disable wifi | tee -a $DEBUGLOG
+#            sleep $DELAY_DISABLE_ENABLE
+#	else
+#	    echo "Waiting for connection" | tee -a
+#	    wait_for_connection
+#	    RESULT=$?
+	    
+#	    if [ $? -ne 0 ] ; then
+#	        break
+#	    fi
+#	fi
+#    done
 }
 
 wifi_disable() {
-    echo "    Wifi Disable" >> /tmp/S20connman.log
-    echo "        Calling 'connmanctl disable wifi'" >> /tmp/S20connman.log
-    connmanctl disable wifi 2>/tmp/S20connman.log
+    echo "    Wifi Disable" | tee -a $DEBUGLOG
+    echo "        Calling 'connmanctl disable wifi'" | tee -a $DEBUGLOG
+    connmanctl disable wifi 2>> $DEBUGLOG
 }
 
 case "$1" in
@@ -123,12 +174,13 @@ case "$1" in
         batocera_hostname
         wifi_configure_all
         printf "Starting connman: "
-        start-stop-daemon -S -q -m -b -p /var/run/connmand.pid --exec /usr/sbin/connmand -- -n -r
+        start-stop-daemon -S -q -m -b -p /var/run/connmand.pid --exec /usr/sbin/connmand -- -n -r $DEBUG_MODE
 
-
+        sleep 2
+        
         for i in $(seq 1 20); do
-            echo "    Calling 'connmanctl state'" >> /tmp/S20connman.log
-            if connmanctl state 2>/tmp/S20connman.log | tee -a /tmp/S20connman.log | grep -qE '^[ ]*State[ ]='; then
+            echo "    Calling 'connmanctl state'" | tee -a /tmp/S20connman.log
+            if connmanctl state 2>> $DEBUGLOG | tee -a $DEBUGLOG | grep -qE '^[ ]*State[ ]='; then
                 break
             fi
             sleep 0.25
@@ -136,11 +188,11 @@ case "$1" in
         sleep 0.5
 
         if [ "$settingsWlan" = "1" ];then
-            # Detach the wifi enable process
-            echo "    enabling wifi [detached]" >> /tmp/S20connman.log
-            wifi_enable &
+            # Disable WiFi before we enable it.
+            wifi_disable
+            sleep 2
+            wifi_enable
         else
-            echo "    disabling wifi" >> /tmp/S20connman.log
             wifi_disable
         fi
 
@@ -153,7 +205,7 @@ case "$1" in
         ;;
     restart | reload)
         $0 stop
-        sleep 0.5
+        sleep 3
         $0 start
         ;;
     *)
