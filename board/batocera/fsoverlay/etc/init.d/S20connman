@@ -154,6 +154,7 @@ case "$1" in
         sleep 0.5
 
         if [ "$settingsWlan" = "1" ];then
+            # Detach the wifi enable process
             wifi_enable &
         else
             wifi_disable
