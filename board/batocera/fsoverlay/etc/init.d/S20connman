@@ -99,31 +99,6 @@ wifi_configure_all() {
     done
 }
 
-max_connection_wait=3
-wait_for_connection() {
-    echo "    Waiting for connection" | tee -a $DEBUGLOG
-    for n in `seq 1 $max_connection_wait`; do
-        echo "    Checking connmanctl state [$n of $max_connection_wait]" | tee -a $DEBUGLOG
-        connmanctl state > /tmp/connmanctl_state.log
-        
-        if grep -q "State = idle" /tmp/connmanctl_state.log ; then
-            echo "        Idle." | tee -a /tmp/S20connman.log
-            cat /tmp/connmanctl_state.log | tee -a $DEBUGLOG
-        else
-            echo "        Not idle" | tee -a /tmp/S20connman.log
-            cat /tmp/connmanctl_state.log | tee -a $DEBUGLOG
-            break
-        fi
-        sleep 1
-    done
-    
-    return 0
-}
-
-# These variables are only needed by the disabled code below
-ENABLE_RETRY_COUNT=1
-DELAY_ENABLE_TO_SCAN=1
-
 wifi_enable() {
     echo "$SCRIPT_NAME: wifi_enable()" >> $DEBUG_LOG
 
@@ -131,18 +106,11 @@ wifi_enable() {
     [ -n "$settingsCountry" ] && /usr/sbin/iw reg set "$settingsCountry"
         
     echo "$SCRIPT_NAME: wifi_enable(): Country: $settingsCountry" >> $DEBUG_LOG
-    
-    #  Extra 'enable wifi' to deal with the 'No Carrier' error that can occur on 5Ghz
+
     echo "$SCRIPT_NAME: wifi_enable(): '> connmanctl enable wifi'" >> $DEBUG_LOG
     
     connmanctl enable wifi 2>> $DEBUG_LOG >> $DEBUG_LOG
-    sleep 1
-    
-    echo "$SCRIPT_NAME: wifi_enable(): '> connmanctl enable wifi'" >> $DEBUG_LOG
-    
-    connmanctl enable wifi 2>> $DEBUG_LOG >> $DEBUG_LOG
-    sleep 1
-    
+   
     echo "$SCRIPT_NAME: wifi_enable(): '> connmanctl scan wifi'" >> $DEBUG_LOG
     #  We redirect the output of scan wifi because we need to check for a NO CARRIER error.
     connmanctl scan wifi 2> /tmp/connmanctl_scan_wifi.err > /tmp/connmanctl_scan_wifi.log 
@@ -151,7 +119,7 @@ wifi_enable() {
     cat /tmp/connmanctl_scan_wifi.err >> $DEBUG_LOG
     
     if grep -q "wifi: No carrier" /tmp/connmanctl_scan_wifi.err ; then
-        echo "$SCRIPT_NAME: wifi_enable(): NO CARRIER:  Restart Daemon" >> $DEBUG_LOG
+        echo "$SCRIPT_NAME: wifi_enable(): NO CARRIER" >> $DEBUG_LOG
     fi
     
     echo "$SCRIPT_NAME: wifi_enable(): '> connmanctl technologies'" >> $DEBUG_LOG
@@ -175,8 +143,6 @@ case "$1" in
         
         echo "$SCRIPT_NAME: start: > start-stop-daemon -S -q -m -b -p /var/run/connmandd.pid --exec /usr/sbin/connmand -- -n -r $DEBUG_MODE" >> $DEBUG_LOG
         start-stop-daemon -S -q -m -b -p /var/run/connmand.pid --exec /usr/sbin/connmand -- -n -r $DEBUG_MODE  2>> $DEBUG_LOG >> $DEBUG_LOG
-
-        sleep 2
         
         for i in $(seq 1 20); do
             echo "$SCRIPT_NAME: start > connmanctl state" >> $DEBUG_LOG
@@ -188,10 +154,7 @@ case "$1" in
         sleep 0.5
 
         if [ "$settingsWlan" = "1" ];then
-            # Disable WiFi before we enable it.
-            wifi_disable
-            sleep 2
-            wifi_enable
+            wifi_enable &
         else
             wifi_disable
         fi
@@ -211,7 +174,7 @@ case "$1" in
         ;;
     restart | reload)
         $0 stop
-        sleep 3
+        sleep 0.5
         $0 start
         ;;
     *)
