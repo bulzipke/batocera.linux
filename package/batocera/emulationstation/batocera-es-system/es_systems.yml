@@ -366,6 +366,8 @@ nds:
       melonds: { requireAnyOf: [BR2_PACKAGE_MELONDS] }
     drastic:
       drastic: { requireAnyOf: [BR2_PACKAGE_DRASTIC], incompatible_extensions: [7z] }
+    advanced_drastic:
+      advanced_drastic: { requireAnyOf: [BR2_PACKAGE_ADVANCED_DRASTIC], incompatible_extensions: [7z] }
 
 fds:
   name:       Family Computer Disk System
