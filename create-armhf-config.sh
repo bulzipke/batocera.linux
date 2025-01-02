@@ -1,7 +1,7 @@
 #!/bin/bash
 
 disabled_packages="BUSYBOX_SHOW_OTHERS SKELETON.* BATOCERA_TARGET_H700 \
- HOST_.* MALI_G31_FBDEV \
+ HOST_.* MALI_G31_FBDEV TPM2_TSS \
  BTRFS_PROGS WINBTRFS LIBRETRO.* BATOCERA_.*_SYSTEMS \
  .*MUPEN64.* RETROARCH.* CGENIUS DEVILUTIONX SDLPOP CANNONBALL XASH3D_FWGS \
  HLSDK_XASH3D HLSDK_XASH3D_DMC HLSDK_XASH3D_OPFOR ECWOLF SONIC2013 SONICCD \
@@ -41,6 +41,7 @@ disabled_packages="BUSYBOX_SHOW_OTHERS SKELETON.* BATOCERA_TARGET_H700 \
  .*TARGET_ARCH.* LINUXCONSOLETOOLS.* .*FIRMWARE.* BATOCERA_CONFIGGEN \
  BR2_PACKAGE_BATOCERA_INITRAMFS .*TRIGGERHAPPY.* \
  GST1_PLUGINS_BAD_PLUGIN_BLUEZ # build fails if this is enabled \
+ BATOCERA_AUDIO # build fails if this is enabled \
 "
 
 make h700-config
@@ -58,8 +59,7 @@ for package in $disabled_packages; do
   mv armhf_packages.grep armhf_packages
 done
 
-cat armhf_packages >> configs/batocera-h700_armhf_libs.packages
-rm armhf_packages
+mv armhf_packages configs/batocera-h700_armhf_libs.packages
 
 echo Ready to make -j8 h700_armhf_libs-build
 
