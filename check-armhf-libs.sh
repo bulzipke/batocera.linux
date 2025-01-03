@@ -7,23 +7,32 @@ ls output/h700_armhf_libs/target/usr/lib | awk 'BEGIN {FS="."} {print $1}' |grep
 echo
 echo Missing libs:
 
-diff ./liblist64.txt ./liblist32.txt | grep lib | grep \<
+if [[ $1 == '-a' ]]; then
+  diff ./liblist64.txt ./liblist32.txt | grep lib | grep \<
+  exit 0
+fi
 
-echo
-echo Missing libs, ignoring unneeded ones:
+ignored='avahi libdns_sd' # avahi
+ignored+=' samba libsmb libsamdb libnss libndr' # samba
+ignored+=' libtevent wbclient dcerpc libnetapi' # samba
+ignored+=' nfsid ntfs libbtrfs libext2fs libe2p libcom_err libss' # fs
+ignored+=' libfdisk libparted' # fs
+ignored+=' pigpio bluetooth libi2c' # hw
+ignored+=' libelf libdw libasm' # elfutils
+ignored+=' libgamestream moonlight' # moonlight
+ignored+=' lightspark mupen libretro solarus' # emulators
+ignored+=' mosquitto' # net
+ignored+=' alpm' # pacman
+ignored+=' libSAASound' # used by simcoupe
+ignored+=' libSDL2_mixer_ext' # used by thextech
+ignored+=' libgomp' # gcc
 
-diff ./liblist64.txt ./liblist32.txt | grep lib | grep \< \
- | grep -v tss | grep -v SPIRV | grep -v libnss | grep -v avahi \
- | grep -v samba | grep -v libsmb | grep -v pigpio \
- | grep -v libparted | grep -v bluetooth | grep -v libelf \
- | grep -v libext2fs | grep -v libfdisk | grep -v libgamestream \
- | grep -v libjim | grep -v jitterentropye | grep -v lightspark \
- | grep -v mosquitto | grep -v mupen | grep -v libretro \
- | grep -v sqlite | grep -v xtables | grep -v solarus \
- | grep -v moonlight | grep -v ntfs | grep -v libbtrfs \
- | grep -v libi2c | grep -v libndr | grep -v alpm \
- | grep -v libasm | grep -v libgomp | grep -v libsamdb \
- | grep -v wbclient | grep -v libe2p | grep -v nfsid \
- | grep -v libdw | grep -v libSAASound | grep -v libSDL2_mixer_ext
+diff ./liblist64.txt ./liblist32.txt | grep lib | grep \< > libdiff.txt
 
-rm liblist*.txt
+for ignore in $ignored; do
+  grep -v $ignore libdiff.txt > libdiff.txt.grep
+  mv libdiff.txt.grep libdiff.txt
+done
+
+cat libdiff.txt
+rm libdiff.txt
