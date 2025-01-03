@@ -21,11 +21,14 @@ ignored+=' pigpio bluetooth libi2c' # hw
 ignored+=' libelf libdw libasm' # elfutils
 ignored+=' libgamestream moonlight' # moonlight
 ignored+=' lightspark mupen libretro solarus' # emulators
-ignored+=' mosquitto' # net
+ignored+=' mosquitto libxtables' # net
 ignored+=' alpm' # pacman
 ignored+=' libSAASound' # used by simcoupe
 ignored+=' libSDL2_mixer_ext' # used by thextech
 ignored+=' libgomp' # gcc
+ignored+=' libip4tc libip6tc' # iptables
+ignored+=' libprocps' # procps
+ignored+=' libsyslog' # sysklogd
 
 diff ./liblist64.txt ./liblist32.txt | grep lib | grep \< > libdiff.txt
 
