@@ -4,7 +4,7 @@
 #
 ################################################################################
 
-DRASTIC_LAYOUT_VERSION = 1a87174d451c5141ef99220e7174d4f6b227635c
+DRASTIC_LAYOUT_VERSION = 3fb9aa23b95e7022dcfadface457f2f35e12405d
 DRASTIC_LAYOUT_SITE = $(call github,trngaje,drastic_layout,$(DRASTIC_LAYOUT_VERSION))
 DRASTIC_LAYOUT_DEPENDENCIES =
 

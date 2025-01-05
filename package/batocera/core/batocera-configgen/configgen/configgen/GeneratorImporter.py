@@ -175,14 +175,6 @@ def getGenerator(emulator):
         from generators.drastic.drasticGenerator import DrasticGenerator
         return DrasticGenerator()
 
-    if emulator == 'drastic-steward':
-        from generators.drastic_steward.drasticstewardGenerator import DrasticstewardGenerator
-        return DrasticstewardGenerator()
-
-    if emulator == 'drastic_steward':
-        from generators.drastic_steward.drastic_stewardGenerator import Drastic_stewardGenerator
-        return Drastic_stewardGenerator()
-
     if emulator == 'advanced_drastic':
         from generators.advanced_drastic.advanced_drasticGenerator import Advanced_drasticGenerator
         return Advanced_drasticGenerator()

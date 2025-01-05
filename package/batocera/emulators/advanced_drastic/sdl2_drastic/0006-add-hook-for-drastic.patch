@@ -40923,10 +40923,10 @@ index 000000000..1162470be
 +#endif
 diff --git a/src/video/drastic_video.c b/src/video/drastic_video.c
 new file mode 100644
-index 000000000..a6f069d33
+index 000000000..3e0f7051a
 --- /dev/null
 +++ b/src/video/drastic_video.c
-@@ -0,0 +1,9073 @@
+@@ -0,0 +1,8973 @@
 +/*
 +  Special customized version for the DraStic emulator that runs on
 +  rgxxxx, trimui handhelds.
@@ -41035,7 +41035,16 @@ index 000000000..a6f069d33
 +
 +    {0xffff,0xffff}    
 +    };
-+ADVANCE_DRASTIC      g_advdrastic;
++
++/*
++    unsigned long ulInput;
++    unsigned int uiUseSAVformat;
++    unsigned int uiRotateDPAD;
++    unsigned int uiRotateButtons;
++    unsigned int uiEnableautosavestate;
++    unsigned int uiSlotOfAutosavestate;
++*/
++ADVANCE_DRASTIC      g_advdrastic = {0, 0, 0, 0, 0, 10,}; // uiSlotOfAutosavestate = 10 default
 +extern theme_t g_theme;
 +
 +//int FB_W = 0;
@@ -42139,11 +42148,11 @@ index 000000000..a6f069d33
 +	swap_screens = (uint32_t *)(*((uint32_t *)VAR_SDL_SWAP_SCREENS));
 +
 + //   printf(PREFIX"process_screen++\n");
-+    if (nds.auto_state > 0) {
-+        if (need_loadstate > 0) {
++    if (g_advdrastic.uiEnableautosavestate > 0) {
++        if (need_loadstate > 0) { // 꼭 이래야 하나 확인 필요함 (15 frame 후에 실행)
 +            need_loadstate-= 1;
 +            if (need_loadstate == 0) {
-+                dtr_loadstate(nds.auto_slot);
++                dtr_loadstate(g_advdrastic.uiSlotOfAutosavestate);
 +            }
 +        }
 +    }
@@ -42512,14 +42521,15 @@ index 000000000..a6f069d33
 +               
 +        guikey = -1;
 +        switch(input_value[0]) {
-+        case 0: guikey = MYKEY_UP; break;
-+        case 1: guikey = MYKEY_DOWN; break;
-+        case 2: guikey = MYKEY_LEFT; break;
-+        case 3: guikey = MYKEY_RIGHT; break;
-+        case 4: guikey = MYKEY_A; break;
-+        case 5: guikey = MYKEY_B; break;
++        case DRASTIC_GUI_INPUT_UP: 
++        case DRASTIC_GUI_INPUT_DOWN: 
++        case DRASTIC_GUI_INPUT_LEFT: 
++        case DRASTIC_GUI_INPUT_RIGHT: 
++        case DRASTIC_GUI_INPUT_A: 
++        case DRASTIC_GUI_INPUT_B: 
++            guikey = input_value[0];
 +        }
-+    } while(nds.menu.enable == 1 && guikey != MYKEY_B);
++    } while(nds.menu.enable == 1 && guikey != DRASTIC_GUI_INPUT_B);
 +    nds.menu.enable = 0;
 +    clear_gui_actions();
 +    
@@ -43792,7 +43802,7 @@ index 000000000..a6f069d33
 +    
 +    //printf("[trngaje] sdl_draw_menu_bg:param_1=%p\n", param_1 - base_addr_rx);
 +    //printf("[trngaje] save_state_num=%p\n", param_1[1] + 0x458 - base_addr_rx);
-+    printf("[trngaje] %d\n", *(unsigned int *)(param_1[1] + 0x458));
++    printf("[trngaje] 0x%x\n", *(unsigned int *)(param_1[1] + 0x458));
 +    g_save_slot = *(unsigned int *)(param_1[1] + 0x458);
 +
 +
@@ -43861,7 +43871,9 @@ index 000000000..a6f069d33
 +    save_directory_config_file = (nds_save_directory_config_file)FUN_SAVE_DIRECTORY_CONFIG_FILE;
 +    
 +    printf("[trngaje]sdl_quit: param_1=0x%x\n", param_1);
-+    dtr_savestate(nds.auto_slot);
++    if (g_advdrastic.uiEnableautosavestate > 0) {
++        dtr_savestate(g_advdrastic.uiSlotOfAutosavestate);
++    }
 +    drastic_VideoQuit();
 +  /*  
 +    if (nds_system[param_1 + 0x37339a8] == '\0') {
@@ -43896,7 +43908,7 @@ index 000000000..a6f069d33
 +}
 +
 +// 여긴 계속 호출되고 있음
-+void sdl_update_screen(void)
++void sdl_update_screens(void)
 +{
 +    // acquire a lock
 +    pthread_mutex_lock(&lock);
@@ -43910,7 +43922,7 @@ index 000000000..a6f069d33
 +    pthread_mutex_unlock(&lock);     
 +}
 +
-+void sdl_update_screen_dummy(void)
++void sdl_update_screen(void)
 +{
 +}
 +
@@ -43921,6 +43933,8 @@ index 000000000..a6f069d33
 +    SDL_Surface *t0 = NULL;
 +    SDL_Surface *t1 = NULL;
 +    static int fps_cnt = 0;
++
++    printf(PREFIX"sdl_print_string:p=%s, fg=0x%x, bg=0x%x, x=%d, y=%d\n", p, fg, bg, x, y);
 +
 +    if (p && (strlen(p) > 0)) {
 +        if (drastic_menu.cnt < MAX_MENU_LINE) {
@@ -44332,7 +44346,19 @@ index 000000000..a6f069d33
 +						lVar6 = strtol(pcVar3,(char **)0x0,10);
 +						g_advdrastic.uiRotateButtons = (int)lVar6;
 +					}
-+                    
++
++					iVar2 = strcasecmp(__s1,"enable_autosavestate");
++					if (iVar2 == 0) {
++						lVar6 = strtol(pcVar3,(char **)0x0,10);
++						g_advdrastic.uiEnableautosavestate = (int)lVar6;
++					}
++ 
++					iVar2 = strcasecmp(__s1,"autosavestate_slot");
++					if (iVar2 == 0) {
++						lVar6 = strtol(pcVar3,(char **)0x0,10);
++						g_advdrastic.uiSlotOfAutosavestate = (int)lVar6;
++					}
++                   
 +					iVar2 = strcasecmp(__s1,"controls_a[CONTROL_INDEX_UP]");
 +					if (iVar2 == 0) {
 +						lVar6 = strtol(pcVar3,(char **)0x0,10);
@@ -45003,6 +45029,10 @@ index 000000000..a6f069d33
 +
 +        __fprintf_chk(__stream,1,"%s = %d\n","rotate_buttons",   g_advdrastic.uiRotateButtons);
 +
++        __fprintf_chk(__stream,1,"%s = %d\n","enable_autosavestate",   g_advdrastic.uiEnableautosavestate);
++
++        __fprintf_chk(__stream,1,"%s = %d\n","autosavestate_slot",   g_advdrastic.uiSlotOfAutosavestate);
++
 +        __fprintf_chk(__stream,1,"%s = %d\n","controls_a[CONTROL_INDEX_UP]",
 +                      *(unsigned short *)(param_1 + 0x85a2c));
 +        __fprintf_chk(__stream,1,"%s = %d\n","controls_a[CONTROL_INDEX_DOWN]",
@@ -45509,6 +45539,10 @@ index 000000000..a6f069d33
 +}
 +
 +const char *static_text_degrees[4]= {"            0", "           90", "          180", "          270"}; // space 필요함
++const char *static_text_slots[11]= {"            0",  "           1",  "          2",  "          3",  "          4", 
++    "            5",  "           6",  "          7",  "          8",  "          9", 
++    "            10"
++}; // space 필요함
 +
 +unsigned char ** sdl_create_menu_options(long param_1,unsigned char *param_2)
 +{
@@ -45547,11 +45581,11 @@ index 000000000..a6f069d33
 +    
 +    lVar8 = *(long *)(param_1 + 8);
 +    ppcVar3 = (unsigned char **)malloc(0x30);
-+    *(unsigned long *)((long)ppcVar3 + 0x14) = 0x19+2; //+1;
++    *(unsigned long *)((long)ppcVar3 + 0x14) = NUM_OF_MENU_OPTIONS; //0x19+2; //+1;
 +    *ppcVar3 = draw_menu_options;
 +    ppcVar3[1] = focus_menu_none;
 +    ppcVar3[5] = param_2;
-+    puVar4 = (unsigned long *)malloc(200+8*3);
++    puVar4 = (unsigned long *)malloc(NUM_OF_MENU_OPTIONS * 8/*200+8*3*/);
 +    ppcVar3[4] = (unsigned char *)puVar4;
 +    ppcVar5 = (char **)malloc(0x48);
 +    ppcVar7 = ppcVar5;
@@ -45570,7 +45604,8 @@ index 000000000..a6f069d33
 +    ppcVar6[5] = (char *)0x0;
 +    ppcVar7[6] = (char *)(lVar8 + 0x440);
 +    ppcVar7[7] = (char *)0x200000000; // none/manual/automatic
-+    *puVar4 = ppcVar5;
++    //*puVar4 = ppcVar5; // index
++    puVar4 [DRASTIC_MENU_OPTIONS_FRAME_SKIP_TYPE]= ppcVar5; 
 +    ppcVar5[2] = (char *)draw_numeric_labeled;
 +    ppcVar5[8] = base_addr_rx + 0x0015b410; //frameskip_labels.11546;
 +    
@@ -45587,7 +45622,7 @@ index 000000000..a6f069d33
 +    ppcVar7[5] = (char *)0x0;
 +    ppcVar5[6] = (char *)(lVar8 + 0x444);
 +    ppcVar5[7] = (char *)0x900000001; // 1,2,3,4,5,6,7,8,9
-+    puVar4[1] = ppcVar5;
++    puVar4[DRASTIC_MENU_OPTIONS_FRAME_SKIP_VALUE] = ppcVar5;
 +    
 +    ppcVar5 = (char **)malloc(0x48);
 +    ppcVar7 = ppcVar5;
@@ -45606,7 +45641,7 @@ index 000000000..a6f069d33
 +    ppcVar6[5] = (char *)0x0;
 +    ppcVar7[6] = (char *)(lVar8 + 0x4a8);
 +    ppcVar7[7] = (char *)0x100000000;
-+    puVar4[2] = ppcVar5;
++    puVar4[DRASTIC_MENU_OPTIONS_SAFE_FRAME_SKIPPING] = ppcVar5;
 +    ppcVar5[2] = (char *)draw_numeric_labeled;
 +    ppcVar5[8] = base_addr_rx + 0x0015b430;// yes_no_labels.11545;
 +    
@@ -45627,7 +45662,7 @@ index 000000000..a6f069d33
 +    ppcVar6[5] = (char *)0x0;
 +    ppcVar7[6] = (char *)(param_1 + 0x50);
 +    ppcVar7[7] = (char *)0x200000000; // vertical/horizontal/single
-+    puVar4[3] = ppcVar5;
++    puVar4[DRASTIC_MENU_OPTIONS_SCREEN_ORIENTATION] = ppcVar5;
 +    ppcVar5[2] = (char *)draw_numeric_labeled;
 +    ppcVar5[8] = base_addr_rx + 0x0015b440;//orientation_labels.11547;
 +  
@@ -45648,7 +45683,7 @@ index 000000000..a6f069d33
 +    ppcVar6[5] = (char *)0x0;
 +    ppcVar7[6] = (char *)(lVar8 + 0x454);
 +    ppcVar7[7] = (char *)0x100000000;
-+    puVar4[4] = ppcVar5;
++    puVar4[DRASTIC_MENU_OPTIONS_SCREEN_SWAP] = ppcVar5;
 +    ppcVar5[2] = (char *)draw_numeric_labeled;
 +    ppcVar5[8] = base_addr_rx + 0x0015b430;//yes_no_labels.11545;
 +  
@@ -45669,7 +45704,7 @@ index 000000000..a6f069d33
 +    ppcVar6[5] = (char *)0x0;
 +    ppcVar7[6] = (char *)(lVar8 + 0x448);
 +    ppcVar7[7] = (char *)0x100000000;
-+    puVar4[5] = ppcVar5;
++    puVar4[DRASTIC_MENU_OPTIONS_SHOW_SPEED] = ppcVar5;
 +    ppcVar5[2] = (char *)draw_numeric_labeled;
 +    ppcVar5[8] = base_addr_rx + 0x0015b430;//yes_no_labels.11545;
 +  
@@ -45690,7 +45725,7 @@ index 000000000..a6f069d33
 +    ppcVar6[5] = (char *)0x0;
 +    ppcVar7[6] = (char *)(lVar8 + 0x460);
 +    ppcVar7[7] = (char *)0x100000000;
-+    puVar4[6] = ppcVar5;
++    puVar4[DRASTIC_MENU_OPTIONS_ENABLE_SOUND] = ppcVar5;
 +    ppcVar5[2] = (char *)draw_numeric_labeled;
 +    ppcVar5[8] = base_addr_rx + 0x0015b430;//yes_no_labels.11545;
 +  
@@ -45711,7 +45746,7 @@ index 000000000..a6f069d33
 +    ppcVar6[5] = (char *)0x0;
 +    ppcVar7[6] = (char *)(lVar8 + 0x45c);
 +    ppcVar7[7] = (char *)0x100000000;
-+    puVar4[7] = ppcVar5;
++    puVar4[DRASTIC_MENU_OPTIONS_FAST_FORWARD] = ppcVar5;
 +    ppcVar5[2] = (char *)draw_numeric_labeled;
 +    ppcVar5[8] = base_addr_rx + 0x0015b430;//yes_no_labels.11545;
 +  
@@ -45732,7 +45767,7 @@ index 000000000..a6f069d33
 +    ppcVar6[5] = (char *)0x0;
 +    ppcVar7[6] = (char *)(lVar8 + 0x46c);
 +    ppcVar7[7] = (char *)0x100000000;
-+    puVar4[8] = ppcVar5;
++    puVar4[DRASTIC_MENU_OPTIONS_MIRROR_TOUCHSCREEN] = ppcVar5;
 +    ppcVar5[2] = (char *)draw_numeric_labeled;
 +    ppcVar5[8] = base_addr_rx + 0x0015b430;//yes_no_labels.11545;
 +  
@@ -45753,7 +45788,7 @@ index 000000000..a6f069d33
 +    ppcVar6[5] = (char *)0x0;
 +    ppcVar7[6] = (char *)(lVar8 + 0x470);
 +    ppcVar7[7] = (char *)0x100000000;
-+    puVar4[9] = ppcVar5;
++    puVar4[DRASTIC_MENU_OPTIONS_COMPRESS_SAVESTATES] = ppcVar5;
 +    ppcVar5[2] = (char *)draw_numeric_labeled;
 +    ppcVar5[8] = base_addr_rx + 0x0015b430;//yes_no_labels.11545;
 +  
@@ -45774,7 +45809,7 @@ index 000000000..a6f069d33
 +    ppcVar6[5] = (char *)0x0;
 +    ppcVar7[6] = (char *)(lVar8 + 0x474);
 +    ppcVar7[7] = (char *)0x100000000;
-+    puVar4[10] = ppcVar5;
++    puVar4[DRASTIC_MENU_OPTIONS_SNAPSHOT_IN_SAVESTATES] = ppcVar5;
 +    ppcVar5[2] = (char *)draw_numeric_labeled;
 +    ppcVar5[8] = base_addr_rx + 0x0015b430;//yes_no_labels.11545;
 +  
@@ -45795,7 +45830,7 @@ index 000000000..a6f069d33
 +    ppcVar6[5] = (char *)0x0;
 +    ppcVar7[6] = (char *)(lVar8 + 0x478);
 +    ppcVar7[7] = (char *)0x100000000;
-+    puVar4[0xb] = ppcVar5;
++    puVar4[DRASTIC_MENU_OPTIONS_ENABLE_CHEATS] = ppcVar5;
 +    ppcVar5[2] = (char *)draw_numeric_labeled;
 +    ppcVar5[8] = base_addr_rx + 0x0015b430;//yes_no_labels.11545;
 +  
@@ -45816,7 +45851,7 @@ index 000000000..a6f069d33
 +    ppcVar6[5] = (char *)0x0;
 +    ppcVar7[6] = (char *)(lVar8 + 0x47c);
 +    ppcVar7[7] = (char *)0x100000000;
-+    puVar4[0xc] = ppcVar5;
++    puVar4[DRASTIC_MENU_OPTIONS_UNCOMPRESS_ROMS] = ppcVar5;
 +    ppcVar5[2] = (char *)draw_numeric_labeled;
 +    ppcVar5[8] = base_addr_rx + 0x0015b430;//yes_no_labels.11545;
 +  
@@ -45837,7 +45872,7 @@ index 000000000..a6f069d33
 +    ppcVar6[5] = (char *)0x0;
 +    ppcVar7[6] = (char *)(lVar8 + 0x480);
 +    ppcVar7[7] = (char *)0x100000000;
-+    puVar4[0xd] = ppcVar5;
++    puVar4[DRASTIC_MENU_OPTIONS_BACKUP_IN_SAVESTATES] = ppcVar5;
 +    ppcVar5[2] = (char *)draw_numeric_labeled;
 +    ppcVar5[8] = base_addr_rx + 0x0015b430;//yes_no_labels.11545;
 +  
@@ -45858,7 +45893,7 @@ index 000000000..a6f069d33
 +    ppcVar6[5] = (char *)0x0;
 +    ppcVar7[6] = (char *)(param_1 + 0x54);
 +    ppcVar7[7] = (char *)0x700000000;// none, 50%,..400%
-+    puVar4[0xe] = ppcVar5;
++    puVar4[DRASTIC_MENU_OPTIONS_SPEED_OVERRIDE] = ppcVar5;
 +    ppcVar5[2] = (char *)draw_numeric_labeled;
 +    ppcVar5[8] = base_addr_rx + 0x0015b460;//speed_override_labels.11550;
 +  
@@ -45879,7 +45914,7 @@ index 000000000..a6f069d33
 +    ppcVar6[5] = (char *)0x0;
 +    ppcVar7[6] = (char *)(lVar8 + 0x494);
 +    ppcVar7[7] = (char *)0x100000000;
-+    puVar4[0xf] = ppcVar5;
++    puVar4[DRASTIC_MENU_OPTIONS_FIX_MAIN_2D_SCREEN] = ppcVar5;
 +    ppcVar5[2] = (char *)draw_numeric_labeled;
 +    ppcVar5[8] = base_addr_rx + 0x0015b430;//yes_no_labels.11545;
 +  
@@ -45900,7 +45935,7 @@ index 000000000..a6f069d33
 +    ppcVar6[5] = (char *)0x0;
 +    ppcVar7[6] = (char *)(lVar8 + 0x498);
 +    ppcVar7[7] = (char *)0x100000000;
-+    puVar4[0x10] = ppcVar5;
++    puVar4[DRASTIC_MENU_OPTIONS_DISABLE_EDGE_MARKING] = ppcVar5;
 +    ppcVar5[2] = (char *)draw_numeric_labeled;
 +    ppcVar5[8] = base_addr_rx + 0x0015b430;//yes_no_labels.11545;
 +  
@@ -45921,7 +45956,7 @@ index 000000000..a6f069d33
 +    ppcVar6[5] = (char *)0x0;
 +    ppcVar7[6] = (char *)(lVar8 + 0x4ac);
 +    ppcVar7[7] = (char *)0x300000000;//none, gba cart, sram cart,rumble pack
-+    puVar4[0x11] = ppcVar5;
++    puVar4[DRASTIC_MENU_OPTIONS_SLOT_2_DEVICE] = ppcVar5;
 +    ppcVar5[2] = (char *)draw_numeric_labeled;
 +    ppcVar5[8] = base_addr_rx + 0x0015b4a0; //slot2_device_type_labels.11551;
 +  
@@ -45942,7 +45977,7 @@ index 000000000..a6f069d33
 +    ppcVar6[5] = (char *)0x0;
 +    ppcVar7[6] = (char *)(lVar8 + 0x49c);
 +    ppcVar7[7] = (char *)0x100000000;
-+    puVar4[0x12] = ppcVar5;
++    puVar4[DRASTIC_MENU_OPTIONS_HIGH_RESOLUTION_3D] = ppcVar5;
 +    ppcVar5[2] = (char *)draw_numeric_labeled;
 +    ppcVar5[8] = base_addr_rx + 0x0015b430;//yes_no_labels.11545;
 +  
@@ -45963,11 +45998,12 @@ index 000000000..a6f069d33
 +    ppcVar6[5] = (char *)0x0;
 +    ppcVar7[6] = (char *)(lVar8 + 0x468);
 +    ppcVar7[7] = (char *)0x100000000;
-+    puVar4[0x13] = ppcVar5;
++    puVar4[DRASTIC_MENU_OPTIONS_THREADED_3D] = ppcVar5;
 +    ppcVar5[2] = (char *)draw_numeric_labeled;
 +    ppcVar5[8] = base_addr_rx + 0x0015b430;//yes_no_labels.11545;
 +
 +    // add by trngaje
++    ////////////////
 +    ppcVar5 = (char **)malloc(0x48);
 +    ppcVar7 = ppcVar5;
 +    if (ppcVar5 == (char **)0x0) {
@@ -45985,7 +46021,7 @@ index 000000000..a6f069d33
 +    ppcVar6[5] = (char *)0x0;
 +    ppcVar7[6] = (char *)&g_advdrastic.uiUseSAVformat; 
 +    ppcVar7[7] = (char *)0x100000000;
-+    puVar4[0x13+1] = ppcVar5;
++    puVar4[DRASTIC_MENU_OPTIONS_USE_RAW_SAV_FORMAT] = ppcVar5;
 +    ppcVar5[2] = (char *)draw_numeric_labeled;
 +    ppcVar5[8] = base_addr_rx + 0x0015b430;//yes_no_labels.11545;
 +    
@@ -46007,7 +46043,7 @@ index 000000000..a6f069d33
 +    ppcVar6[5] = (char *)0x0;
 +    ppcVar7[6] = (char *)&g_advdrastic.uiRotateDPAD; 
 +    ppcVar7[7] = (char *)0x300000000; // max 값 3
-+    puVar4[0x13+2] = ppcVar5;
++    puVar4[DRASTIC_MENU_OPTIONS_ROATE_DPAD] = ppcVar5;
 +    ppcVar5[2] = (char *)draw_numeric_labeled;
 +    ppcVar5[8] = static_text_degrees; 
 +//
@@ -46028,10 +46064,50 @@ index 000000000..a6f069d33
 +    ppcVar6[5] = (char *)0x0;
 +    ppcVar7[6] = (char *)&g_advdrastic.uiRotateButtons; 
 +    ppcVar7[7] = (char *)0x300000000; // max 값 3
-+    puVar4[0x13+3] = ppcVar5;
++    puVar4[DRASTIC_MENU_OPTIONS_ROATE_BUTTONS] = ppcVar5;
 +    ppcVar5[2] = (char *)draw_numeric_labeled;
 +    ppcVar5[8] = static_text_degrees;
 +//
++    ppcVar5 = (char **)malloc(0x48);
++    ppcVar7 = ppcVar5;
++    if (ppcVar5 == (char **)0x0) {
++        ppcVar7 = (char **)malloc(0x40);
++    }
++    ppcVar6 = ppcVar7;
++    if (ppcVar7 == (char **)0x0) {
++        ppcVar6 = (char **)malloc(0x30);
++    }
++    *ppcVar6 = "Enable auto savestate";
++    *(unsigned int  *)(ppcVar6 + 1) = 0x33+2;
++    ppcVar6[2] = (char *)draw_numeric;
++    ppcVar6[3] = (char *)action_numeric;
++    ppcVar6[4] = (char *)0x0;
++    ppcVar6[5] = (char *)0x0;
++    ppcVar7[6] = (char *)&g_advdrastic.uiEnableautosavestate; 
++    ppcVar7[7] = (char *)0x100000000;
++    puVar4[DRASTIC_MENU_OPTIONS_AUTO_SAVESTATE] = ppcVar5;
++    ppcVar5[2] = (char *)draw_numeric_labeled;
++    ppcVar5[8] = base_addr_rx + 0x0015b430;//yes_no_labels.11545;
++  
++//
++    ppcVar5 = (char **)malloc(0x48);
++    ppcVar7 = ppcVar5;
++    if (ppcVar5 == (char **)0x0) {
++        ppcVar7 = (char **)malloc(0x40);
++    }
++    *(unsigned int  *)(ppcVar7 + 1) = 0x33+2;
++    *ppcVar7 = "Assign auto savestate slot";
++    ppcVar7[2] = (char *)draw_numeric;
++    ppcVar7[3] = (char *)action_numeric;
++    ppcVar7[4] = (char *)0x0;
++    ppcVar7[5] = (char *)0x0;
++    ppcVar5[6] = (char *)&g_advdrastic.uiSlotOfAutosavestate; 
++    ppcVar5[7] = (char *)0xa00000000; // 0~10
++    puVar4[DRASTIC_MENU_OPTIONS_AUTO_SAVESTATE_SLOT] = ppcVar5;
++    ppcVar5[2] = (char *)draw_numeric_labeled;
++    ppcVar5[8] = static_text_slots;
++///
++
 +    ppcVar5 = (char **)malloc(0x38);
 +    ppcVar7 = ppcVar5;
 +    if (ppcVar5 == (char **)0x0) {
@@ -46043,7 +46119,7 @@ index 000000000..a6f069d33
 +    ppcVar7[3] = (char *)action_select;
 +    ppcVar7[4] = (char *)0x0;
 +    ppcVar7[5] = (char *)0x0;
-+    puVar4[0x14+3] = ppcVar5;
++    puVar4[DRASTIC_MENU_OPTIONS_DELETE_GAME_SPECIFIC_CONFIG] = ppcVar5;
 +    ppcVar5[6] = (char *)select_delete_config_local;
 +  
 +    ppcVar5 = (char **)malloc(0x38);
@@ -46057,7 +46133,7 @@ index 000000000..a6f069d33
 +    ppcVar7[3] = (char *)action_select;
 +    ppcVar7[4] = (char *)0x0;
 +    ppcVar7[5] = (char *)0x0;
-+    puVar4[0x15+3] = ppcVar5;
++    puVar4[DRASTIC_MENU_OPTIONS_EXIT_SAVE_FOR_ALL_GAMES] = ppcVar5;
 +    ppcVar5[6] = (char *)select_save_config_global;
 +  
 +    ppcVar5 = (char **)malloc(0x38);
@@ -46071,7 +46147,7 @@ index 000000000..a6f069d33
 +    ppcVar7[3] = (char *)action_select;
 +    ppcVar7[4] = (char *)0x0;
 +    ppcVar7[5] = (char *)0x0;
-+    puVar4[0x16+3] = ppcVar5;
++    puVar4[DRASTIC_MENU_OPTIONS_EXIT_SAVE_FOR_THIS_GAME] = ppcVar5;
 +    ppcVar5[6] = (char *)select_save_config_local;
 +  
 +    ppcVar5 = (char **)malloc(0x38);
@@ -46086,7 +46162,7 @@ index 000000000..a6f069d33
 +    ppcVar7[3] = (char *)action_select;
 +    ppcVar7[4] = (char *)0x0;
 +    ppcVar7[5] = (char *)0x0;
-+    puVar4[0x17+3] = ppcVar5;
++    puVar4[DRASTIC_MENU_OPTIONS_EXIT_WITHOUT_SAVING] = ppcVar5;
 +    uVar2 = 0x5c;
 +    if (iVar1 == 0) {
 +        uVar2 = 0x100;
@@ -46644,12 +46720,12 @@ index 000000000..a6f069d33
 +                }
 +            }
 +            else if (nds.menu.drastic.enable) {
-+                //printf("[trngaje] nds.menu.drastic.enable:true, nds.update_menu=%d\n", nds.update_menu);
++                printf("[trngaje] nds.menu.drastic.enable:true, nds.update_menu=%d\n", nds.update_menu);
 +                if (nds.update_menu) {
 +                    nds.update_menu = 0;
 +                    GFX_Copy(-1, nds.menu.drastic.main->pixels, nds.menu.drastic.main->clip_rect, nds.menu.drastic.main->clip_rect, nds.menu.drastic.main->pitch, 0, 0);
-+                   GFX_Flip();
-+               }
++                    GFX_Flip();
++                }
 +           }
 +           else if (nds.update_screen) {      
 +               process_screen();
@@ -46762,7 +46838,7 @@ index 000000000..a6f069d33
 +{
 +    struct json_object *jval = NULL;
 +    struct json_object *jfile = NULL;
-+
++/*
 +	const char mykey_name[NUM_OF_MYKEY][20]= {
 +        "up", "down", "left", "right", "a", "b", "x", "y", "l1", "r1", 
 +        "l2", "r2", "l3", "r3","select", "start", "menu", "qsave", "qload", "ff", 
@@ -46770,6 +46846,7 @@ index 000000000..a6f069d33
 +    };
 +	
 +	char full_mykey_name[100];
++*/
 +	int i;
 +
 +    jfile = json_object_from_file(nds.cfg.path);
@@ -46803,12 +46880,12 @@ index 000000000..a6f069d33
 +    }
 +
 +    nds.dis_hres_mode = (nds.dis_mode == NDS_DIS_MODE_HRES1) ? NDS_DIS_MODE_HRES1 : NDS_DIS_MODE_HRES0;
-+
++/*
 +    json_object_object_get_ex(jfile, JSON_NDS_ALT_MODE, &jval);
 +    if (jval) {
 +        nds.alt_mode = json_object_get_int(jval);
 +    }
-+    
++  
 +    json_object_object_get_ex(jfile, JSON_NDS_PEN_XV, &jval);
 +    if (jval) {
 +        nds.pen.xv = json_object_get_int(jval);
@@ -46818,7 +46895,7 @@ index 000000000..a6f069d33
 +    if (jval) {
 +        nds.pen.yv = json_object_get_int(jval);
 +    }
-+
++  */
 +    json_object_object_get_ex(jfile, JSON_NDS_ALPHA_VALUE, &jval);
 +    if (jval) {
 +        nds.alpha.val = json_object_get_int(jval);
@@ -46834,7 +46911,7 @@ index 000000000..a6f069d33
 +        nds.alpha.border = json_object_get_int(jval);
 +        nds.alpha.border%= NDS_BORDER_MAX;
 +    }
-+
++/*
 +    json_object_object_get_ex(jfile, JSON_NDS_MAX_CPU, &jval);
 +    if (jval) {
 +        nds.maxcpu = json_object_get_int(jval);
@@ -46854,12 +46931,12 @@ index 000000000..a6f069d33
 +    if (jval) {
 +        nds.mincore = json_object_get_int(jval);
 +    }
-+
++*/
 +    json_object_object_get_ex(jfile, JSON_NDS_OVERLAY, &jval);
 +    if (jval) {
 +        nds.overlay.sel = json_object_get_int(jval);
 +    }
-+
++#if 0
 +    json_object_object_get_ex(jfile, JSON_NDS_SWAP_L1L2, &jval);
 +    if (jval) {
 +        nds.swap_l1l2 = json_object_get_int(jval) ? 1 : 0;
@@ -46870,7 +46947,7 @@ index 000000000..a6f069d33
 +        nds.swap_r1r2 = json_object_get_int(jval) ? 1 : 0;
 +    }
 +
-+#if 0
++
 +    json_object_object_get_ex(jfile, JSON_NDS_KEYS_ROTATE, &jval);
 +    if (jval) {
 +        nds.keys_rotate = json_object_get_int(jval) % 3;
@@ -46898,7 +46975,7 @@ index 000000000..a6f069d33
 +        const char *p = json_object_get_string(jval);
 +        nds.menu.c2 = strtol(p, NULL, 16);
 +    }
-+
++/*
 +    nds.auto_state = 1;
 +    json_object_object_get_ex(jfile, JSON_NDS_AUTO_STATE, &jval);
 +    if (jval) {
@@ -46910,7 +46987,7 @@ index 000000000..a6f069d33
 +    if (jval) {
 +        nds.auto_slot = json_object_get_int(jval);
 +    }
-+
++*/
 +    lang_enum();
 +    json_object_object_get_ex(jfile, JSON_NDS_LANG, &jval);
 +    if (jval) {
@@ -46919,24 +46996,25 @@ index 000000000..a6f069d33
 +        strcpy(nds.lang.trans[DEF_LANG_SLOT], lang);
 +        lang_load(lang);
 +    }
-+
++/*
 +    json_object_object_get_ex(jfile, JSON_NDS_HOTKEY, &jval);
 +    if (jval) {
 +        nds.hotkey = json_object_get_int(jval);
 +    }
-+
++*/
 +    nds.menu.show_cursor = 0;
 +    json_object_object_get_ex(jfile, JSON_NDS_MENU_CURSOR, &jval);
 +    if (jval) {
 +        nds.menu.show_cursor = json_object_get_int(jval);
 +    }
 +
++/*
 +    nds.fast_forward = 6;
 +    json_object_object_get_ex(jfile, JSON_NDS_FAST_FORWARD, &jval);
 +    if (jval) {
 +        nds.fast_forward = json_object_get_int(jval);
 +    }
-+
++*/
 +    json_object_object_get_ex(jfile, JSON_NDS_STATES, &jval);
 +    if (jval) {
 +        struct stat st = {0};
@@ -46965,13 +47043,14 @@ index 000000000..a6f069d33
 +            nds.menu.sel = 0;
 +        }
 +    }
-+	
++/*	
 +	json_object_object_get_ex(jfile, "input_dev", &jval);
 +	if (jval) {
 +        const char *dev = json_object_get_string(jval);
 +
 +        strcpy(nds.input.dev, dev);		
 +	}
++
 +
 +	for (i=0; i< NUM_OF_MYKEY; i++) {
 +		sprintf(full_mykey_name, "input_%s", mykey_name[i]);
@@ -46981,7 +47060,7 @@ index 000000000..a6f069d33
 +		else
 +			nds.input.key[i] =  -1; // not defined
 +	}
-+	
++*/	
 +	json_object_object_get_ex(jfile, "display_rotate", &jval);
 +	if (jval)
 +		nds.display.rotate = json_object_get_int(jval);
@@ -47031,19 +47110,19 @@ index 000000000..a6f069d33
 +    json_object_object_add(jfile, JSON_NDS_ALPHA_POSITION, json_object_new_int(nds.alpha.pos));
 +    json_object_object_add(jfile, JSON_NDS_ALPHA_BORDER, json_object_new_int(nds.alpha.border));
 +    json_object_object_add(jfile, JSON_NDS_OVERLAY, json_object_new_int(nds.overlay.sel));
-+    json_object_object_add(jfile, JSON_NDS_ALT_MODE, json_object_new_int(nds.alt_mode));
++   // json_object_object_add(jfile, JSON_NDS_ALT_MODE, json_object_new_int(nds.alt_mode));
 +#if 0 
 +    json_object_object_add(jfile, JSON_NDS_KEYS_ROTATE, json_object_new_int(nds.keys_rotate));
 +#endif
 +    json_object_object_add(jfile, JSON_NDS_LANG, json_object_new_string(nds.lang.trans[DEF_LANG_SLOT]));
-+    json_object_object_add(jfile, JSON_NDS_HOTKEY, json_object_new_int(nds.hotkey));
-+    json_object_object_add(jfile, JSON_NDS_SWAP_L1L2, json_object_new_int(nds.swap_l1l2));
-+    json_object_object_add(jfile, JSON_NDS_SWAP_R1R2, json_object_new_int(nds.swap_r1r2));
-+    json_object_object_add(jfile, JSON_NDS_PEN_XV, json_object_new_int(nds.pen.xv));
-+    json_object_object_add(jfile, JSON_NDS_PEN_YV, json_object_new_int(nds.pen.yv));
++   // json_object_object_add(jfile, JSON_NDS_HOTKEY, json_object_new_int(nds.hotkey));
++    //json_object_object_add(jfile, JSON_NDS_SWAP_L1L2, json_object_new_int(nds.swap_l1l2));
++    //json_object_object_add(jfile, JSON_NDS_SWAP_R1R2, json_object_new_int(nds.swap_r1r2));
++    //json_object_object_add(jfile, JSON_NDS_PEN_XV, json_object_new_int(nds.pen.xv));
++    //json_object_object_add(jfile, JSON_NDS_PEN_YV, json_object_new_int(nds.pen.yv));
 +    json_object_object_add(jfile, JSON_NDS_MENU_BG, json_object_new_int(nds.menu.sel));
 +    json_object_object_add(jfile, JSON_NDS_MENU_CURSOR, json_object_new_int(nds.menu.show_cursor));
-+    json_object_object_add(jfile, JSON_NDS_FAST_FORWARD, json_object_new_int(nds.fast_forward));
++    //json_object_object_add(jfile, JSON_NDS_FAST_FORWARD, json_object_new_int(nds.fast_forward));
 +
 +    json_object_object_add(jfile, JSON_NDS_PIXEL_FILTER, json_object_new_int(pixel_filter));
 +
@@ -47649,6 +47728,8 @@ index 000000000..a6f069d33
 +        is_565 = 1;
 +    }
 +
++    //printf("[trngaje] draw_pen++: width=%d, is_565=%d\n", width, is_565);
++
 +    if (width == NDS_Wx2) {
 +        sw = NDS_Wx2;
 +        sh = NDS_Hx2;
@@ -47656,9 +47737,9 @@ index 000000000..a6f069d33
 +    }
 +
 +
-+	x =  (uint32_t) (*((uint64_t *)VAR_SDL_SCREEN_CURSOR)); // high(32bit) y | low(32bit) x
-+	y =  (uint32_t)(*((uint64_t *)VAR_SDL_SCREEN_CURSOR) >> 32);
-+	
++	x =  (uint32_t) (*((uint64_t *)VAR_SDL_SCREEN_CURSOR)) * scale; // high(32bit) y | low(32bit) x
++	y =  (uint32_t)(*((uint64_t *)VAR_SDL_SCREEN_CURSOR) >> 32) * scale;
++	//printf("[trngaje] draw_pen++: x=%d, y=%d\n", x, y);
 +	/*
 +    x = (evt.mouse.x * sw) / evt.mouse.maxx;
 +    y = (evt.mouse.y * sh) / evt.mouse.maxy;
@@ -47671,11 +47752,14 @@ index 000000000..a6f069d33
 +
 +    switch(nds.pen.type) {
 +    case PEN_LT:
++        printf("[trngaje]PEN_LT\n");
 +        break;
 +    case PEN_LB:
++        printf("[trngaje]PEN_LB\n");
 +        y -= (h * scale);
 +        break;
 +    case PEN_RT:
++        printf("[trngaje]PEN_RT\n");
 +        x -= (w * scale);
 +        break;
 +    case PEN_RB:
@@ -47720,11 +47804,12 @@ index 000000000..a6f069d33
 +        for (c0=0; c0<w; c0++) {
 +            x0 = x1 = (c0 * scale) + x;
 +            y0 = y1 = (c1 * scale) + (y - sub);
-+
++/*
 +            if (scale == 2) {
 +                x0 += 1;
 +                y0 += 1;
 +            }
++*/
 +            if ((y0 >= 0) && (y0 < sh) && (x0 < sw) && (x0 >= 0)) {
 +                if (*s) {
 +                    if (is_565) {
@@ -47751,6 +47836,7 @@ index 000000000..a6f069d33
 +            s+= 1;
 +        }
 +    }
++    //printf("[trngaje] draw_pen--\n");
 +    return 0;
 +}
 +
@@ -48343,9 +48429,9 @@ index 000000000..a6f069d33
 +    //detour_hook(FUN_SAVESTATE_PRE, (intptr_t)sdl_savestate_pre);
 +    //detour_hook(FUN_SAVESTATE_POST, (intptr_t)sdl_savestate_post);
 +    //detour_hook(FUN_BLIT_SCREEN_MENU, (intptr_t)sdl_blit_screen_menu);
-+    detour_hook(FUN_UPDATE_SCREENS, (intptr_t)sdl_update_screen);
++    detour_hook(FUN_UPDATE_SCREENS, (intptr_t)sdl_update_screens);
 +
-+    detour_hook(FUN_UPDATE_SCREEN, (intptr_t)sdl_update_screen_dummy);
++    detour_hook(FUN_UPDATE_SCREEN, (intptr_t)sdl_update_screen);
 +    //detour_hook(FUN_UPDATE_FRAME, (intptr_t)sdl_update_screen);
 +    //detour_hook(FUN_RENDER_POLYGON_SETUP_PERSPECTIVE_STEPS, (intptr_t)render_polygon_setup_perspective_steps);    
 +
@@ -48370,6 +48456,9 @@ index 000000000..a6f069d33
 +    detour_hook(FUN_DRAW_NUMERIC_LABELED, (intptr_t)sdl_draw_numeric_labeled);
 +    detour_hook(FUN_PLATFORM_GET_CONFIG_INPUT, (intptr_t)sdl_platform_get_config_input);
 +
++    detour_hook(FUN_DRAW_MENU_OPTION, (intptr_t)sdl_draw_menu_option);
++    detour_hook(FUN_SET_SCREEN_MENU_ON, (intptr_t)sdl_set_screen_menu_on);
++    //detour_hook(FUN_DRAW_MENU_MAIN, (intptr_t)sdl_draw_menu_main);
 +    //detour_hook(FUN_SPU_LOAD_FAKE_MICROPHONE_DATA, (intptr_t)sdl_spu_load_fake_microphone_data);
 +#if 0
 +    printf(PREFIX"Installed hooking for libc functions\n");
@@ -48469,88 +48558,12 @@ index 000000000..a6f069d33
 +    lang_unload();
 +}
 +
-+static const char *DIS_MODE0_640[] = {
-+    "640*480",
-+    "640*480",
-+    "512*384",
-+    "640*480",
-+    "256*192",
-+    "320*240",
-+    "256*192",
-+    "320*240",
-+    "480*360",
-+    "384*288",
-+    "384*288",
-+    "384*288",
-+    "427*320",
-+    "427*320"
-+};
-+
-+static const char *DIS_MODE1_640[] = {
-+    "170*128",
-+    "256*192",
-+    "",
-+    "",
-+    "256*192",
-+    "320*240",
-+    "256*192",
-+    "320*240",
-+    "160*120",
-+    "256*192",
-+    "256*192",
-+    "256*192",
-+    "427*320",
-+    "427*320",
-+};
-+
-+static const char *DIS_MODE0_752[] = {
-+    "752*560",
-+    "752*560",
-+    "512*384",
-+    "752*560",
-+    "256*192",
-+    "373*280",
-+    "256*192",
-+    "373*280",
-+    "592*440",
-+    "496*368",
-+    "496*368",
-+    "496*368",
-+    "501*376",
-+    "501*376"
-+};
-+
-+static const char *DIS_MODE1_752[] = {
-+    "170*128",
-+    "256*192",
-+    "",
-+    "",
-+    "256*192",
-+    "373*280",
-+    "256*192",
-+    "373*280",
-+    "160*120",
-+    "256*192",
-+    "256*192",
-+    "256*192",
-+    "501*376",
-+    "501*376",
-+};
-+
 +static const char *POS[] = {
 +    "Top-Right", "Top-Left", "Bottom-Left", "Bottom-Right"
 +};
 +
 +static const char *BORDER[] = {
 +    "None", "White", "Red", "Green", "Blue", "Black", "Yellow", "Cyan"
-+};
-+
-+static const char *DPAD[] = {
-+    "0°", "90°", "270°"
-+};
-+
-+static const char *HOTKEY[] = {
-+    "MENU", "SELECT"
 +};
 +
 +static int lang_next(void)
@@ -48636,6 +48649,7 @@ index 000000000..a6f069d33
 +#endif
 +};
 +
++
 +int handle_menu(int key)
 +{
 +    static int pre_ff = 0;
@@ -48644,9 +48658,6 @@ index 000000000..a6f069d33
 +    static uint32_t pre_cpuclock = 0;
 +    static char pre_lang[LANG_FILE_LEN] = {0};
 +
-+    //const int SX = 640 * 0.1; //nds.enable_752x560 ? 200 : 150;
-+    //const int SY = 480 * 0.1; //nds.enable_752x560 ? 120 : 107;
-+    //const int SSX = 640 * 0.5; //nds.enable_752x560 ? 410 : 385;
 +    const int SX = g_advdrastic.iDisplay_width * 0.1;
 +    const int SY = g_advdrastic.iDisplay_height * 0.1;
 +    const int SSX = g_advdrastic.iDisplay_width * 0.5;
@@ -48669,127 +48680,100 @@ index 000000000..a6f069d33
 +
 +    uint32_t bgcolor;
 +
++    unsigned char  ucLayoutType;
++    unsigned short  usLayoutRotate;
++
++    usLayoutRotate = getlayout_rotate(nds.hres_mode, g_advdrastic.ucLayoutIndex[nds.hres_mode]);
++    ucLayoutType = getlayout_type(nds.hres_mode, g_advdrastic.ucLayoutIndex[nds.hres_mode]);
++    
 +    if (pre_lang[0] == 0) {
 +        strcpy(pre_lang, nds.lang.trans[DEF_LANG_SLOT]);
 +    }
 +
 +    switch (key) {
-+    case MYKEY_UP:
++    case DRASTIC_GUI_INPUT_UP:
 +        if (cur_sel > 0) {
 +            cur_sel-= 1;
 +        }
 +        break;
-+    case MYKEY_DOWN:
++    case DRASTIC_GUI_INPUT_DOWN:
 +        if (cur_sel < (MENU_LAST - 1)) {
 +            cur_sel+= 1;
 +        }
 +        break;
-+    case MYKEY_LEFT:
++    case DRASTIC_GUI_INPUT_LEFT:
 +        switch(cur_sel) {
 +        case MENU_LANG:
 +            lang_prev();
 +            break;
 +
 +        case MENU_DIS:
-+            if (nds.hres_mode == 0) {
-+                if (nds.dis_mode > 0) {
-+                    nds.dis_mode-= 1;
-+                }
++            if (g_advdrastic.ucLayoutIndex[nds.hres_mode] > 0) {
++                g_advdrastic.ucLayoutIndex[nds.hres_mode] -= 1;
 +            }
-+            else {
-+                nds.dis_mode = NDS_DIS_MODE_HRES0;
-+            }
++
 +            break;
 +        case MENU_DIS_ALPHA:
-+            if (((nds.dis_mode == NDS_DIS_MODE_VH_T0) || (nds.dis_mode == NDS_DIS_MODE_VH_T1))) {
++            //if (((nds.dis_mode == NDS_DIS_MODE_VH_T0) || (nds.dis_mode == NDS_DIS_MODE_VH_T1))) {
++            if ( ucLayoutType == LAYOUT_TYPE_TRANSPARENT) {
 +                if (nds.alpha.val > 0) {
 +                    nds.alpha.val-= 1;
 +                }
 +            }
 +            break;
 +        case MENU_DIS_BORDER:
-+            if ((nds.alpha.val > 0) && ((nds.dis_mode == NDS_DIS_MODE_VH_T0) || (nds.dis_mode == NDS_DIS_MODE_VH_T1))) {
++            if ((nds.alpha.val > 0) && ( ucLayoutType == LAYOUT_TYPE_TRANSPARENT)/*((nds.dis_mode == NDS_DIS_MODE_VH_T0) || (nds.dis_mode == NDS_DIS_MODE_VH_T1))*/) {
 +                if (nds.alpha.border > 0) {
 +                    nds.alpha.border-= 1;
 +                }
 +            }
 +            break;
 +        case MENU_DIS_POSITION:
-+            if (((nds.dis_mode == NDS_DIS_MODE_VH_T0) || (nds.dis_mode == NDS_DIS_MODE_VH_T1))) {
++            //if (((nds.dis_mode == NDS_DIS_MODE_VH_T0) || (nds.dis_mode == NDS_DIS_MODE_VH_T1))) {
++            if ( ucLayoutType == LAYOUT_TYPE_TRANSPARENT) {
 +                if (nds.alpha.pos > 0) {
 +                    nds.alpha.pos-= 1;
 +                }
 +            }
 +            break;
-+#if 0
-+        case MENU_ALT:
-+            if ((nds.hres_mode == 0) && (nds.alt_mode > 0)) {
-+                nds.alt_mode-= 1;
-+            }
-+            break;
 +
-+        case MENU_KEYS:
-+            if (nds.keys_rotate > 0) {
-+                nds.keys_rotate-= 1;
-+            }
-+            break;
-+
-+        case MENU_PEN_XV:
-+            if (nds.pen.xv > PEN_XV_MIN) {
-+                nds.pen.xv-= PEN_XV_DEC;
-+            }
-+            break;
-+        case MENU_PEN_YV:
-+            if (nds.pen.yv > PEN_YV_MIN) {
-+                nds.pen.yv-= PEN_YV_DEC;
-+            }
-+            break;
-+#endif
 +        case MENU_CURSOR:
 +            nds.menu.show_cursor = 0;
 +            break;
-+#if 0
-+        case MENU_FAST_FORWARD:
-+            if (nds.fast_forward > 1) {
-+                nds.fast_forward -= 1;
-+            }
-+            break;
-+#endif
++
 +        default:
 +            break;
 +        }
 +        break;
-+    case MYKEY_RIGHT:
++    case DRASTIC_GUI_INPUT_RIGHT:
 +        switch(cur_sel) {
 +        case MENU_LANG:
 +            lang_next();
 +            break;
 +        case MENU_DIS:
-+            if (nds.hres_mode == 0) {
-+                if (nds.dis_mode < getmax_layout(nds.hres_mode)) {
-+                    nds.dis_mode+= 1;
-+                }
++            if (g_advdrastic.ucLayoutIndex[nds.hres_mode] < (getmax_layout(nds.hres_mode)-1)) {
++                g_advdrastic.ucLayoutIndex[nds.hres_mode] += 1;
 +            }
-+            else {
-+                nds.dis_mode = NDS_DIS_MODE_HRES1;
-+            }
++
 +            break;
 +        case MENU_DIS_ALPHA:
-+            if (((nds.dis_mode == NDS_DIS_MODE_VH_T0) || (nds.dis_mode == NDS_DIS_MODE_VH_T1))) {
++            //if (((nds.dis_mode == NDS_DIS_MODE_VH_T0) || (nds.dis_mode == NDS_DIS_MODE_VH_T1))) {
++            if ( ucLayoutType == LAYOUT_TYPE_TRANSPARENT) {
 +                if (nds.alpha.val < NDS_ALPHA_MAX) {
 +                    nds.alpha.val+= 1;
 +                }
 +            }
 +            break;
 +        case MENU_DIS_BORDER:
-+            if ((nds.alpha.val > 0) && ((nds.dis_mode == NDS_DIS_MODE_VH_T0) || (nds.dis_mode == NDS_DIS_MODE_VH_T1))) {
++            if ((nds.alpha.val > 0) && ( ucLayoutType == LAYOUT_TYPE_TRANSPARENT)/*((nds.dis_mode == NDS_DIS_MODE_VH_T0) || (nds.dis_mode == NDS_DIS_MODE_VH_T1))*/) {
 +                if (nds.alpha.border < NDS_BORDER_MAX) {
 +                    nds.alpha.border+= 1;
 +                }
 +            }
 +            break;
 +        case MENU_DIS_POSITION:
-+            if (((nds.dis_mode == NDS_DIS_MODE_VH_T0) || (nds.dis_mode == NDS_DIS_MODE_VH_T1))) {
++            //if (((nds.dis_mode == NDS_DIS_MODE_VH_T0) || (nds.dis_mode == NDS_DIS_MODE_VH_T1))) {
++            if ( ucLayoutType == LAYOUT_TYPE_TRANSPARENT) {
 +                if (nds.alpha.pos < 3) {
 +                    nds.alpha.pos+= 1;
 +                }
@@ -48798,18 +48782,12 @@ index 000000000..a6f069d33
 +        case MENU_CURSOR:
 +            nds.menu.show_cursor = 1;
 +            break;
-+#if 0
-+        case MENU_FAST_FORWARD:
-+            if (nds.fast_forward < 255) {
-+                nds.fast_forward += 1;
-+            }
-+            break;
-+#endif
++
 +        default:
 +            break;
 +        }
 +        break;
-+    case MYKEY_B:
++    case DRASTIC_GUI_INPUT_B:
 +        if (cur_cpuclock != pre_cpuclock) {
 +            pre_cpuclock = cur_cpuclock;
 +        }
@@ -48819,11 +48797,12 @@ index 000000000..a6f069d33
 +            lang_load(nds.lang.trans[DEF_LANG_SLOT]);
 +            memset(pre_lang, 0, sizeof(pre_lang));
 +        }
-+
++/*
 +        if (pre_ff != nds.fast_forward) {
 +            //dtr_fastforward(nds.fast_forward);
 +            pre_ff = nds.fast_forward;
 +        }
++*/
 +        nds.menu.enable = 0;
 +
 +        return 0;
@@ -48834,11 +48813,7 @@ index 000000000..a6f069d33
 +    if (cur_sel == MENU_DIS) {
 +        dis_mode = g_advdrastic.ucLayoutIndex[nds.hres_mode];
 +    }
-+#if 0
-+    if (cur_sel == MENU_ALT) {
-+        dis_mode = nds.alt_mode;
-+    }
-+#endif
++
 +    //SDL_SoftStretch(nds.menu.bg, NULL, cvt, NULL);
 +    SDL_FillRect(cvt, NULL, SDL_MapRGB(nds.menu.drastic.main->format, 0, 0, 0));
 +/*
@@ -48880,11 +48855,12 @@ index 000000000..a6f069d33
 +        case MENU_DIS_ALPHA:
 +            //sx = 20;
 +            sx = g_advdrastic.iDisplay_width * 20 / 640;
-+            if ((cur_sel == MENU_DIS_ALPHA) && ((nds.dis_mode == NDS_DIS_MODE_VH_T0) || (nds.dis_mode == NDS_DIS_MODE_VH_T1))) {
++            if ((cur_sel == MENU_DIS_ALPHA) && ( ucLayoutType == LAYOUT_TYPE_TRANSPARENT)/*((nds.dis_mode == NDS_DIS_MODE_VH_T0) || (nds.dis_mode == NDS_DIS_MODE_VH_T1))*/) {
 +                col1 = val_col;
 +            }
 +            else {
-+                if ((nds.dis_mode == NDS_DIS_MODE_VH_T0) || (nds.dis_mode == NDS_DIS_MODE_VH_T1)) {
++                //if ((nds.dis_mode == NDS_DIS_MODE_VH_T0) || (nds.dis_mode == NDS_DIS_MODE_VH_T1)) {
++                if ( ucLayoutType == LAYOUT_TYPE_TRANSPARENT) {
 +                    col1 = unsel_col;
 +                }
 +                else {
@@ -48895,11 +48871,11 @@ index 000000000..a6f069d33
 +        case MENU_DIS_BORDER:
 +            //sx = 20;
 +            sx = g_advdrastic.iDisplay_width * 20 / 640;
-+            if ((cur_sel == MENU_DIS_BORDER) && (nds.alpha.val > 0) && ((nds.dis_mode == NDS_DIS_MODE_VH_T0) || (nds.dis_mode == NDS_DIS_MODE_VH_T1))) {
++            if ((cur_sel == MENU_DIS_BORDER) && (nds.alpha.val > 0) && ( ucLayoutType == LAYOUT_TYPE_TRANSPARENT)/*((nds.dis_mode == NDS_DIS_MODE_VH_T0) || (nds.dis_mode == NDS_DIS_MODE_VH_T1))*/) {
 +                col1 = val_col;
 +            }
 +            else {
-+                if ((nds.alpha.val > 0) && ((nds.dis_mode == NDS_DIS_MODE_VH_T0) || (nds.dis_mode == NDS_DIS_MODE_VH_T1))) {
++                if ((nds.alpha.val > 0) && ( ucLayoutType == LAYOUT_TYPE_TRANSPARENT)/*((nds.dis_mode == NDS_DIS_MODE_VH_T0) || (nds.dis_mode == NDS_DIS_MODE_VH_T1))*/) {
 +                    col1 = unsel_col;
 +                }
 +                else {
@@ -48910,11 +48886,12 @@ index 000000000..a6f069d33
 +        case MENU_DIS_POSITION:
 +            //sx = 20;
 +            sx = g_advdrastic.iDisplay_width * 20 / 640;
-+            if ((cur_sel == MENU_DIS_POSITION) && ((nds.dis_mode == NDS_DIS_MODE_VH_T0) || (nds.dis_mode == NDS_DIS_MODE_VH_T1))) {
++            if ((cur_sel == MENU_DIS_POSITION) && ( ucLayoutType == LAYOUT_TYPE_TRANSPARENT)/*((nds.dis_mode == NDS_DIS_MODE_VH_T0) || (nds.dis_mode == NDS_DIS_MODE_VH_T1))*/) {
 +                col1 = val_col;
 +            }
 +            else {
-+                if ((nds.dis_mode == NDS_DIS_MODE_VH_T0) || (nds.dis_mode == NDS_DIS_MODE_VH_T1)) {
++                //if ((nds.dis_mode == NDS_DIS_MODE_VH_T0) || (nds.dis_mode == NDS_DIS_MODE_VH_T1)) {
++                if ( ucLayoutType == LAYOUT_TYPE_TRANSPARENT) {
 +                    col1 = unsel_col;
 +                }
 +                else {
@@ -48922,16 +48899,7 @@ index 000000000..a6f069d33
 +                }
 +            }
 +            break;
-+#if 0
-+        case MENU_ALT:
-+            if (nds.hres_mode == 0) {
-+                col1 = (cur_sel == cc) ? val_col : unsel_col;
-+            }
-+            else {
-+                col1 = unsel_col;
-+            }
-+            break;
-+#endif
++
 +        default:
 +            break;
 +        }
@@ -48987,45 +48955,19 @@ index 000000000..a6f069d33
 +        case MENU_LANG:
 +            sprintf(buf, "%s", nds.lang.trans[DEF_LANG_SLOT]);
 +            break;
-+#if 0
-+        case MENU_CPU:
-+            sprintf(buf, "%dMHz", cur_cpuclock);
-+            break;
-+        case MENU_HOTKEY:
-+            sprintf(buf, "%s", to_lang(HOTKEY[nds.hotkey]));
-+            break;
-+        case MENU_SWAP_L1L2:
-+            sprintf(buf, "%s", to_lang(nds.swap_l1l2 ? "Yes" : "No"));
-+            break;
-+        case MENU_SWAP_R1R2:
-+            sprintf(buf, "%s", to_lang(nds.swap_r1r2 ? "Yes" : "No"));
-+            break;
-+        case MENU_OVERLAY:
-+            if (nds.overlay.sel < nds.overlay.max) {
-+                get_file_path(nds.overlay.path, nds.overlay.sel, buf, 0);
-+                //reload_overlay();
-+            }
-+            else {
-+                sprintf(buf, to_lang("None"));
-+            }
-+            break;
-+#endif
++
 +        case MENU_DIS:
++            sprintf(buf, "[%d]", g_advdrastic.ucLayoutIndex[nds.hres_mode]);
++/*
 +            if (nds.hres_mode == 0) {
 +                sprintf(buf, "[%d]   %s", nds.dis_mode, nds.enable_752x560 ? DIS_MODE0_752[nds.dis_mode] : DIS_MODE0_640[nds.dis_mode]);
 +            }
 +            else {
 +                sprintf(buf, "[%d]   %s", nds.dis_mode, nds.dis_mode == NDS_DIS_MODE_HRES0 ? "512*384" : "640*480");
 +            }
++*/
 +            break;
 +        case MENU_DIS_ALPHA:
-+            if (nds.hres_mode == 0) {
-+                sprintf(buf, "[%d]   ", nds.dis_mode);
-+                sx = get_font_width(buf);
-+                sprintf(buf, "%s", nds.enable_752x560 ? DIS_MODE1_752[nds.dis_mode] : DIS_MODE1_640[nds.dis_mode]);
-+                draw_info(cvt, buf, SSX + sx, SY + (h * idx), (cur_sel == MENU_DIS) ? nds.menu.c0 : nds.menu.c1, 0);
-+            }
-+
 +            sx = 0;
 +            sprintf(buf, "%d", nds.alpha.val);
 +            break;
@@ -49035,36 +48977,11 @@ index 000000000..a6f069d33
 +        case MENU_DIS_POSITION:
 +            sprintf(buf, "%s", to_lang(POS[nds.alpha.pos]));
 +            break;
-+#if 0
-+        case MENU_ALT:
-+            sprintf(buf, "[%d]   %s", nds.alt_mode, nds.enable_752x560 ? DIS_MODE0_752[nds.alt_mode] : DIS_MODE0_640[nds.alt_mode]);
-+            break;
 +
-+        case MENU_KEYS:
-+            sprintf(buf, "[%d]   ", nds.alt_mode);
-+            sx = get_font_width(buf);
-+            sprintf(buf, "%s", nds.enable_752x560 ? DIS_MODE1_752[nds.alt_mode] : DIS_MODE1_640[nds.alt_mode]);
-+            draw_info(cvt, buf, SSX + sx, SY + (h * idx), (nds.hres_mode == 0) && (cur_sel == MENU_ALT) ? val_col : unsel_col, 0);
-+
-+            sx = 0;
-+            sprintf(buf, "%s", DPAD[nds.keys_rotate % 3]);
-+            break;
-+
-+        case MENU_PEN_XV:
-+            sprintf(buf, "%d (30000)", nds.pen.xv);
-+            break;
-+        case MENU_PEN_YV:
-+            sprintf(buf, "%d (35000)", nds.pen.yv);
-+            break;
-+#endif
 +        case MENU_CURSOR:
 +            sprintf(buf, "%s", to_lang(nds.menu.show_cursor ? "Show" : "Hide"));
 +            break;
-+#if 0
-+        case MENU_FAST_FORWARD:
-+            sprintf(buf, "%d (6)", nds.fast_forward);
-+            break;
-+#endif
++
 +        }
 +        draw_info(cvt, buf, SSX + sx, SY + (h * idx), col1, 0);
 +        idx+= 1;
@@ -49072,317 +48989,8 @@ index 000000000..a6f069d33
 +
 +    sx = g_advdrastic.iDisplay_width * 450 / 640;
 +    sy = g_advdrastic.iDisplay_height * 360 / 480;
-+    if(dis_mode >= 0) {
-+        switch (dis_mode) {
-+        case NDS_DIS_MODE_VH_T0:
-+            rt.x = sx;
-+            rt.y = sy;
-+            rt.w = g_advdrastic.iDisplay_width * 128 / 640;
-+            rt.h = g_advdrastic.iDisplay_height * 96 / 480;
-+            SDL_FillRect(cvt, &rt, SDL_MapRGB(cvt->format, 0x80, 0x00, 0x00));
-+           
-+            rt.w = g_advdrastic.iDisplay_width * 34 / 640;
-+            rt.h = g_advdrastic.iDisplay_height * 26 / 480;
-+            switch (nds.alpha.pos) {
-+            case 0:
-+                rt.x = (sx + g_advdrastic.iDisplay_width * 128 / 640) - rt.w;
-+                rt.y = sy;
-+                break;
-+            case 1:
-+                rt.x = sx;
-+                rt.y = sy;
-+                break;
-+            case 2:
-+                rt.x = sx;
-+                rt.y = (sy + g_advdrastic.iDisplay_height * 96 / 480) - rt.h;
-+                break;
-+            case 3:
-+                rt.x = (sx + g_advdrastic.iDisplay_width * 128 / 640) - rt.w;
-+                rt.y = (sy + g_advdrastic.iDisplay_height * 96 / 480) - rt.h;
-+                break;
-+            }
-+            SDL_FillRect(cvt, &rt, SDL_MapRGB(cvt->format, 0x00, 0x00, (30 * nds.alpha.val)));
-+            break;
-+        case NDS_DIS_MODE_VH_T1:
-+            rt.x = sx;
-+            rt.y = sy;
-+            rt.w = g_advdrastic.iDisplay_width * 128 / 640;
-+            rt.h = g_advdrastic.iDisplay_height * 96 / 480;
-+            SDL_FillRect(cvt, &rt, SDL_MapRGB(cvt->format, 0x80, 0x00, 0x00));
-+           
-+            rt.w = g_advdrastic.iDisplay_width * 51 / 640;
-+            rt.h = g_advdrastic.iDisplay_height * 38 / 480;
-+            switch (nds.alpha.pos) {
-+            case 0:
-+                rt.x = (sx + g_advdrastic.iDisplay_width * 128 / 640) - rt.w;
-+                rt.y = sy;
-+                break;
-+            case 1:
-+                rt.x = sx;
-+                rt.y = sy;
-+                break;
-+            case 2:
-+                rt.x = sx;
-+                rt.y = (sy + g_advdrastic.iDisplay_height * 96 / 480) - rt.h;
-+                break;
-+            case 3:
-+                rt.x = (sx + g_advdrastic.iDisplay_width * 128 / 640) - rt.w;
-+                rt.y = (sy + g_advdrastic.iDisplay_height * 96 / 480) - rt.h;
-+                break;
-+            }
-+            SDL_FillRect(cvt, &rt, SDL_MapRGB(cvt->format, 0x00, 0x00, (30 * nds.alpha.val)));
-+            break;
-+        case NDS_DIS_MODE_S0:
-+            rt.x = sx;
-+            rt.y = sy;
-+            rt.w = g_advdrastic.iDisplay_width * 128 / 640;
-+            rt.h = g_advdrastic.iDisplay_height * 96 / 480;
-+            SDL_FillRect(cvt, &rt, SDL_MapRGB(cvt->format, 0x00, 0x80, 0x00));
-+            
-+            rt.w = g_advdrastic.iDisplay_width * 102 / 640;
-+            rt.h = g_advdrastic.iDisplay_height * 76 / 480;
-+            rt.x = sx + ((g_advdrastic.iDisplay_width * 128 / 640 - rt.w) / 2);
-+            rt.y = sy + ((g_advdrastic.iDisplay_height * 96 / 480 - rt.h) / 2);
-+            SDL_FillRect(cvt, &rt, SDL_MapRGB(cvt->format, 0x80, 0x00, 0x00));
-+            break;
-+        case NDS_DIS_MODE_S1:
-+            rt.x = sx;
-+            rt.y = sy;
-+            rt.w = g_advdrastic.iDisplay_width * 128 / 640;
-+            rt.h = g_advdrastic.iDisplay_height * 96 / 480;
-+            SDL_FillRect(cvt, &rt, SDL_MapRGB(cvt->format, 0x80, 0x00, 0x00));
-+            break;
-+        case NDS_DIS_MODE_V0:
-+            rt.x = sx;
-+            rt.y = sy;
-+            rt.w = g_advdrastic.iDisplay_width * 128 / 640;
-+            rt.h = g_advdrastic.iDisplay_height * 96 / 480;
-+            SDL_FillRect(cvt, &rt, SDL_MapRGB(cvt->format, 0x00, 0x80, 0x00));
-+            
-+            rt.w = g_advdrastic.iDisplay_width * 51 / 640;
-+            rt.h = g_advdrastic.iDisplay_height * 38 / 480;
-+            rt.x = sx + ((g_advdrastic.iDisplay_width * 128 / 640 - rt.w) / 2);
-+            rt.y = sy + ((g_advdrastic.iDisplay_height * 96 / 480 - (rt.h * 2)) / 2);
-+            SDL_FillRect(cvt, &rt, SDL_MapRGB(cvt->format, 0x80, 0x00, 0x00));
-+            
-+            rt.w = g_advdrastic.iDisplay_width * 51 / 640;
-+            rt.h = g_advdrastic.iDisplay_height * 38 / 480;
-+            rt.x = sx + ((g_advdrastic.iDisplay_width * 128 / 640 - rt.w) / 2);
-+            rt.y = sy + ((g_advdrastic.iDisplay_height * 96 / 480 - (rt.h * 2)) / 2) + rt.h;
-+            SDL_FillRect(cvt, &rt, SDL_MapRGB(cvt->format, 0x00, 0x00, 0x80));
-+            break;
-+        case NDS_DIS_MODE_V1:
-+            rt.x = sx;
-+            rt.y = sy;
-+            rt.w = g_advdrastic.iDisplay_width * 128 / 640;
-+            rt.h = g_advdrastic.iDisplay_height * 96 / 480;
-+            SDL_FillRect(cvt, &rt, SDL_MapRGB(cvt->format, 0x00, 0x80, 0x00));
-+            
-+            rt.w = g_advdrastic.iDisplay_width * 64 / 640;
-+            rt.h = g_advdrastic.iDisplay_height * 48 / 480;
-+            rt.x = sx + ((g_advdrastic.iDisplay_width * 128 / 640 - rt.w) / 2);
-+            rt.y = sy + ((g_advdrastic.iDisplay_height * 96 / 480 - (rt.h * 2)) / 2);
-+            SDL_FillRect(cvt, &rt, SDL_MapRGB(cvt->format, 0x80, 0x00, 0x00));
-+            
-+            rt.w = g_advdrastic.iDisplay_width * 64 / 640;
-+            rt.h = g_advdrastic.iDisplay_height * 48 / 480;
-+            rt.x = sx + ((g_advdrastic.iDisplay_width * 128 / 640 - rt.w) / 2);
-+            rt.y = sy + ((g_advdrastic.iDisplay_height * 96 / 480 - (rt.h * 2)) / 2) + rt.h;
-+            SDL_FillRect(cvt, &rt, SDL_MapRGB(cvt->format, 0x00, 0x00, 0x80));
-+            break;
-+        case NDS_DIS_MODE_H0:
-+            rt.x = sx;
-+            rt.y = sy;
-+            rt.w = g_advdrastic.iDisplay_width * 128 / 640;
-+            rt.h = g_advdrastic.iDisplay_height * 96 / 480;
-+            SDL_FillRect(cvt, &rt, SDL_MapRGB(cvt->format, 0x00, 0x80, 0x00));
-+            
-+            rt.w = g_advdrastic.iDisplay_width * 51 / 640;
-+            rt.h = g_advdrastic.iDisplay_height * 38 / 480;
-+            rt.x = sx + ((g_advdrastic.iDisplay_width * 128 / 640 - (rt.w * 2)) / 2);
-+            rt.y = sy + ((g_advdrastic.iDisplay_height * 96 / 480 - rt.h) / 2);
-+            SDL_FillRect(cvt, &rt, SDL_MapRGB(cvt->format, 0x80, 0x00, 0x00));
-+            
-+            rt.w = g_advdrastic.iDisplay_width * 51 / 640;
-+            rt.h = g_advdrastic.iDisplay_height * 38 / 480;
-+            rt.x = sx + ((g_advdrastic.iDisplay_width * 128 / 640 - (rt.w * 2)) / 2) + rt.w;
-+            rt.y = sy + ((g_advdrastic.iDisplay_height * 96 / 480 - rt.h) / 2);
-+            SDL_FillRect(cvt, &rt, SDL_MapRGB(cvt->format, 0x00, 0x00, 0x80));
-+            break;
-+        case NDS_DIS_MODE_H1:
-+            rt.x = sx;
-+            rt.y = sy;
-+            rt.w = g_advdrastic.iDisplay_width * 128 / 640;
-+            rt.h = g_advdrastic.iDisplay_height * 96 / 480;
-+            SDL_FillRect(cvt, &rt, SDL_MapRGB(cvt->format, 0x00, 0x80, 0x00));
-+            
-+            rt.w = g_advdrastic.iDisplay_width * 64 / 640;
-+            rt.h = g_advdrastic.iDisplay_height * 48 / 480;
-+            rt.x = sx + ((g_advdrastic.iDisplay_width * 128 / 640 - (rt.w * 2)) / 2);
-+            rt.y = sy + ((g_advdrastic.iDisplay_height * 96 / 480 - rt.h) / 2);
-+            SDL_FillRect(cvt, &rt, SDL_MapRGB(cvt->format, 0x80, 0x00, 0x00));
-+            
-+            rt.w = g_advdrastic.iDisplay_width * 64 / 640;
-+            rt.h = g_advdrastic.iDisplay_height * 48 / 480;
-+            rt.x = sx + ((g_advdrastic.iDisplay_width * 128 / 640 - (rt.w * 2)) / 2) + rt.w;
-+            rt.y = sy + ((g_advdrastic.iDisplay_height * 96 / 480 - rt.h) / 2);
-+            SDL_FillRect(cvt, &rt, SDL_MapRGB(cvt->format, 0x00, 0x00, 0x80));
-+            break;
-+        case NDS_DIS_MODE_VH_S0:
-+            rt.x = sx;
-+            rt.y = sy;
-+            rt.w = g_advdrastic.iDisplay_width * 128/640;
-+            rt.h = g_advdrastic.iDisplay_height * 96/480;
-+            SDL_FillRect(cvt, &rt, SDL_MapRGB(cvt->format, 0x00, 0x80, 0x00));
-+            
-+            rt.w = g_advdrastic.iDisplay_width * 96/640;
-+            rt.h = g_advdrastic.iDisplay_height * 72/480;
-+            rt.x = sx;
-+            rt.y = sy;
-+            SDL_FillRect(cvt, &rt, SDL_MapRGB(cvt->format, 0x80, 0x00, 0x00));
-+            
-+            rt.w = g_advdrastic.iDisplay_width * 32 / 640;
-+            rt.h = g_advdrastic.iDisplay_height * 24 / 480;
-+            rt.x = sx + (g_advdrastic.iDisplay_width * 128 / 640 - rt.w);
-+            rt.y = sy + (g_advdrastic.iDisplay_height * 96 / 480 - rt.h);
-+            SDL_FillRect(cvt, &rt, SDL_MapRGB(cvt->format, 0x00, 0x00, 0x80));
-+            break;
-+        case NDS_DIS_MODE_VH_S1:
-+            rt.x = sx;
-+            rt.y = sy;
-+            rt.w = g_advdrastic.iDisplay_width * 128 / 640;
-+            rt.h = g_advdrastic.iDisplay_height * 96 / 480;
-+            SDL_FillRect(cvt, &rt, SDL_MapRGB(cvt->format, 0x00, 0x80, 0x00));
-+            
-+            rt.w = g_advdrastic.iDisplay_width * 77 / 640;
-+            rt.h = g_advdrastic.iDisplay_height * 58 / 480;
-+            rt.x = sx;
-+            rt.y = sy;
-+            SDL_FillRect(cvt, &rt, SDL_MapRGB(cvt->format, 0x80, 0x00, 0x00));
-+            
-+            rt.w = g_advdrastic.iDisplay_width * 51 / 640;
-+            rt.h = g_advdrastic.iDisplay_height * 42 / 480;
-+            rt.x = sx + g_advdrastic.iDisplay_width * 77 / 640;
-+            rt.y = sy + g_advdrastic.iDisplay_height * 58 / 480;
-+            SDL_FillRect(cvt, &rt, SDL_MapRGB(cvt->format, 0x00, 0x00, 0x80));
-+            break;
-+        case NDS_DIS_MODE_VH_S2:
-+            rt.x = sx;
-+            rt.y = sy;
-+            rt.w = g_advdrastic.iDisplay_width * 128 / 640;
-+            rt.h = g_advdrastic.iDisplay_height * 96 / 480;
-+            SDL_FillRect(cvt, &rt, SDL_MapRGB(cvt->format, 0x00, 0x80, 0x00));
-+            
-+            rt.w = g_advdrastic.iDisplay_width * 96 / 640;
-+            rt.h = g_advdrastic.iDisplay_height * 72 / 480;
-+            rt.x = sx + g_advdrastic.iDisplay_width * 16 / 640;
-+            rt.y = sy;
-+            SDL_FillRect(cvt, &rt, SDL_MapRGB(cvt->format, 0x80, 0x00, 0x00));
-+            
-+            rt.w = g_advdrastic.iDisplay_width * 32 / 640;
-+            rt.h = g_advdrastic.iDisplay_height * 24 / 480;
-+            rt.x = sx + ((g_advdrastic.iDisplay_width * 128 / 640 - rt.w) / 2);
-+            rt.y = sy + g_advdrastic.iDisplay_height * 72 / 480;
-+            SDL_FillRect(cvt, &rt, SDL_MapRGB(cvt->format, 0x00, 0x00, 0x80));
-+            break;
-+        case NDS_DIS_MODE_VH_C0:
-+            rt.x = sx;
-+            rt.y = sy;
-+            rt.w = g_advdrastic.iDisplay_width * 128 / 640;
-+            rt.h = g_advdrastic.iDisplay_height * 96 / 480;
-+            SDL_FillRect(cvt, &rt, SDL_MapRGB(cvt->format, 0x00, 0x80, 0x00));
-+            
-+            rt.w = g_advdrastic.iDisplay_width * 77 / 640;
-+            rt.h = g_advdrastic.iDisplay_height * 58 / 480;
-+            rt.x = sx + ((g_advdrastic.iDisplay_width * 128 / 640 - rt.w) / 2);
-+            rt.y = sy;
-+            SDL_FillRect(cvt, &rt, SDL_MapRGB(cvt->format, 0x80, 0x00, 0x00));
-+            
-+            rt.w = g_advdrastic.iDisplay_width * 51 / 640;
-+            rt.h = g_advdrastic.iDisplay_height * 38 / 480;
-+            rt.x = sx + ((g_advdrastic.iDisplay_width * 128 / 640 - rt.w) / 2);
-+            rt.y = sy + (g_advdrastic.iDisplay_height * 96 / 480 - rt.h);
-+            SDL_FillRect(cvt, &rt, SDL_MapRGB(cvt->format, 0x00, 0x00, 0x80));
-+            break;
-+        case NDS_DIS_MODE_VH_C1:
-+            rt.x = sx;
-+            rt.y = sy;
-+            rt.w = g_advdrastic.iDisplay_width * 128 / 640;
-+            rt.h = g_advdrastic.iDisplay_height * 96 / 480;
-+            SDL_FillRect(cvt, &rt, SDL_MapRGB(cvt->format, 0x00, 0x80, 0x00));
-+            
-+            rt.w = g_advdrastic.iDisplay_width * 77 / 640;
-+            rt.h = g_advdrastic.iDisplay_height * 58 / 480;
-+            rt.x = sx;
-+            rt.y = sy + ((g_advdrastic.iDisplay_width * 96 / 640 - rt.h) / 2);
-+            SDL_FillRect(cvt, &rt, SDL_MapRGB(cvt->format, 0x80, 0x00, 0x00));
-+            
-+            rt.w = g_advdrastic.iDisplay_width * 51 / 640;
-+            rt.h = g_advdrastic.iDisplay_height * 38 / 480;
-+            rt.x = sx + (g_advdrastic.iDisplay_width * 128 / 640 - rt.w);
-+            rt.y = sy + ((g_advdrastic.iDisplay_height * 96 / 480 - rt.h) / 2);
-+            SDL_FillRect(cvt, &rt, SDL_MapRGB(cvt->format, 0x00, 0x00, 0x80));
-+            break;
-+        case NDS_DIS_MODE_HH0:
-+            rt.x = sx;
-+            rt.y = sy;
-+            rt.w = g_advdrastic.iDisplay_width * 128 / 640;
-+            rt.h = g_advdrastic.iDisplay_height * 96 / 480;
-+            SDL_FillRect(cvt, &rt, SDL_MapRGB(cvt->format, 0x00, 0x80, 0x00));
-+            
-+            rt.w = g_advdrastic.iDisplay_width * 64 / 640;
-+            rt.h = g_advdrastic.iDisplay_height * 85 / 480;
-+            rt.x = sx;
-+            rt.y = sy + ((g_advdrastic.iDisplay_height * 96 / 480 - rt.h) / 2);
-+            SDL_FillRect(cvt, &rt, SDL_MapRGB(cvt->format, 0x80, 0x00, 0x00));
-+            
-+            rt.w = g_advdrastic.iDisplay_width * 64 / 640;
-+            rt.h = g_advdrastic.iDisplay_height * 85 / 480;
-+            rt.x = sx + (g_advdrastic.iDisplay_width * 128 / 640 - rt.w);
-+            rt.y = sy + ((g_advdrastic.iDisplay_height * 96 / 480 - rt.h) / 2);
-+            SDL_FillRect(cvt, &rt, SDL_MapRGB(cvt->format, 0x00, 0x00, 0x80));
-+            break;
-+        case NDS_DIS_MODE_HH1:
-+            rt.x = sx;
-+            rt.y = sy;
-+            rt.w = g_advdrastic.iDisplay_width * 128 / 640;
-+            rt.h = g_advdrastic.iDisplay_height * 96 / 480;
-+            SDL_FillRect(cvt, &rt, SDL_MapRGB(cvt->format, 0x00, 0x80, 0x00));
 +
-+            rt.w = g_advdrastic.iDisplay_width * 64 / 640;
-+            rt.h = g_advdrastic.iDisplay_height * 85 / 480;
-+            rt.x = sx;
-+            rt.y = sy + ((g_advdrastic.iDisplay_height * 96 / 480 - rt.h) / 2);
-+            SDL_FillRect(cvt, &rt, SDL_MapRGB(cvt->format, 0x00, 0x00, 0x80));
-+
-+            rt.w = g_advdrastic.iDisplay_width * 64 / 640;
-+            rt.h = g_advdrastic.iDisplay_height * 85 / 480;
-+            rt.x = sx + (g_advdrastic.iDisplay_width * 128 / 640 - rt.w);
-+            rt.y = sy + ((g_advdrastic.iDisplay_height * 96 / 480 - rt.h) / 2);
-+            SDL_FillRect(cvt, &rt, SDL_MapRGB(cvt->format, 0x80, 0x00, 0x00));
-+            break;
-+        case NDS_DIS_MODE_HRES0:
-+            rt.x = sx;
-+            rt.y = sy;
-+            rt.w = g_advdrastic.iDisplay_width * 128 / 640;
-+            rt.h = g_advdrastic.iDisplay_height * 96 / 480;
-+            SDL_FillRect(cvt, &rt, SDL_MapRGB(cvt->format, 0x00, 0x80, 0x00));
-+            
-+            rt.w = g_advdrastic.iDisplay_width * 102 / 640;
-+            rt.h = g_advdrastic.iDisplay_height * 76 / 480;
-+            rt.x = sx + ((g_advdrastic.iDisplay_width * 128 / 640 - rt.w) / 2);
-+            rt.y = sy + ((g_advdrastic.iDisplay_height * 96 / 480 - rt.h) / 2);
-+            SDL_FillRect(cvt, &rt, SDL_MapRGB(cvt->format, 0x80, 0x00, 0x00));
-+            break;
-+        case NDS_DIS_MODE_HRES1:
-+            rt.x = sx;
-+            rt.y = sy;
-+            rt.w = g_advdrastic.iDisplay_width * 128 / 640;
-+            rt.h = g_advdrastic.iDisplay_height * 96 / 480;
-+            SDL_FillRect(cvt, &rt, SDL_MapRGB(cvt->format, 0x80, 0x00, 0x00));
-+            break;
-+        }
-+    }
++    process_displaylayout(g_advdrastic.iDisplay_width * 0.1, g_advdrastic.iDisplay_height  * 0.5, g_advdrastic.iDisplay_width * 0.3, g_advdrastic.iDisplay_height * 0.3);
 +
 +    nds.update_menu = 1;
 +
@@ -49434,45 +49042,35 @@ index 000000000..a6f069d33
 +    return;
 +}
 +
-+
 +void sdl_menu(long param_1,int param_2)
 +{
-+    printf("[trngaje] param_1=0x%x, param_2=0x%x\n", param_1, param_2);
-+#if 0
 +    uint *puVar1;
 +    long lVar2;
 +    int iVar3;
-+    code **ppcVar4;
++    undefined8 *puVar4;
 +    uint uVar5;
 +    undefined4 uVar6;
 +    int iVar7;
-+    code **__ptr;
++    undefined8 *__ptr;
 +    bool bVar8;
-+
-+    // 함수 callback 재 확인 필요함 (10/19)
-+/*
-+src/video/drastic_video.c:9976:20: warning: assignment to ‘int’ from ‘unsigned char (*)(long int *, long int,  long int)’ makes integer from pointer without a cast [-Wint-conversion]
-+ 9976 |             pcVar9 = (nds_unknown1_func)*(unsigned char **)(lVar13 + 0x20);
-+      |                    ^
-+src/video/drastic_video.c:9979:24: warning: comparison between pointer and integer
-+ 9979 |             if (pcVar9 != (unsigned char *)0x0) {
-+      |                        ^~
-+src/video/drastic_video.c:9980:18: error: invalid type argument of unary ‘*’ (have ‘int’)
-+ 9980 |                 (*pcVar9)(&local_578,lVar13,0);
-+      |                  ^~~~~~~
-+*/
-+     typedef unsigned char   (**nds_unknown1_func)(long *param_1, long param_2, long param_3);
-+    //unsigned char *pcVar9(long *, long, long); // 3번 째 파라메터 포맷 재 확인 필요함
-+    nds_unknown_func pcVar9;
-+
-+    ulong uVar10;
-+    code **ppcVar11;
-+    void *pvVar12;
-+    long lVar13;
++    long lVar9;
++    
++    typedef void  (*nds_func3_cb_t)(long *, long, int);
++    typedef int (*nds_func3r_cb_t)(long *, long, long);
++    typedef int (*nds_func3r_2nd_cb_t)(long, long, int *);
++    //typedef void  (*nds_func2_cb_t)(unsigned long *, unsigned long *);
++    typedef void  (*nds_func2_cb_t)(unsigned long, unsigned long);
++    typedef void  (*nds_func0_cb_t)();
++    //code *pcVar10;
++    nds_func3_cb_t *pcVar10;
++    
++    ulong uVar11;
++    undefined8 *puVar12;
++    void *pvVar13;
 +    int local_580 [2];
 +    long local_578;
 +    uint *local_570;
-+    code **local_568;
++    undefined8 *local_568;
 +    undefined8 uStack_560;
 +    undefined8 local_558;
 +    void *local_550;
@@ -49487,6 +49085,7 @@ index 000000000..a6f069d33
 +    //undefined8 local_520;
 +    unsigned char local_520[8];
 +
++    
 +    byte local_518;
 +    byte local_517;
 +    byte local_516;
@@ -49496,41 +49095,54 @@ index 000000000..a6f069d33
 +    //long local_8;
 +    unsigned char *nds_system;
 +
-+    nds_screen_copy16   screen_copy16;
-+    nds_load_file   load_file;
-+    nds_load_nds  load_nds;
-+    nds_get_gui_input   get_gui_input;
++    nds_screen_copy16       screen_copy16;
++    nds_load_file           load_file;
++    nds_load_nds            load_nds;
++    nds_get_gui_input       get_gui_input;
 +    nds_clear_gui_actions   clear_gui_actions;
-+    nds_load_logo                       load_logo;
++    nds_load_logo           load_logo;
 +    nds_create_menu_main    create_menu_main;
-+    nds_audio_pause                 audio_pause;
++    nds_audio_pause         audio_pause;
 +    nds_set_screen_menu_on  set_screen_menu_on;
-+    nds_draw_menu_bg       draw_menu_bg;
++    nds_draw_menu_bg        draw_menu_bg;
 +    nds_set_font_narrow     set_font_narrow;
-+    nds_set_font_wide          set_font_wide;
-+    nds_update_screen_menu  update_screen_menu;
++    nds_set_font_wide       set_font_wide;
++    nds_update_screen_menu          update_screen_menu;
 +    nds_audio_revert_pause_state    audio_revert_pause_state;
 +    nds_config_update_settings      config_update_settings;
-+    nds_set_screen_menu_off          set_screen_menu_off;
-+    nds_reset_system                           reset_system;
++    nds_set_screen_menu_off         set_screen_menu_off;
++    nds_reset_system                reset_system;
++    nds_print_string                       print_string;
++     nds_delay_us            delay_us;
 +
-+    screen_copy16 = (nds_screen_copy16)FUN_SCREEN_COPY16;
-+    load_file             = (nds_load_file)FUN_LOAD_FILE;
-+    load_nds            = (nds_load_nds)FUN_LOAD_NDS;
-+    get_gui_input  = (nds_get_gui_input)FUN_GET_GUI_INPUT;
-+    clear_gui_actions = (nds_clear_gui_actions)FUN_CLEAR_GUI_ACTIONS;
-+    load_logo                    = (nds_load_logo)FUN_LOAD_LOGO;
-+    create_menu_main = (nds_create_menu_main)FUN_CREATE_MENU_MAIN;
++    nds_action_select_menu action_select_menu; // 임시로 추가
++    nds_draw_menu_option draw_menu_option;
++
++
++    screen_copy16            = (nds_screen_copy16)FUN_SCREEN_COPY16;
++    load_file                = (nds_load_file)FUN_LOAD_FILE;
++    load_nds                 = (nds_load_nds)FUN_LOAD_NDS;
++    get_gui_input            = (nds_get_gui_input)FUN_GET_GUI_INPUT;
++    clear_gui_actions        = (nds_clear_gui_actions)FUN_CLEAR_GUI_ACTIONS;
++    load_logo                = (nds_load_logo)FUN_LOAD_LOGO;
++    create_menu_main         = (nds_create_menu_main)FUN_CREATE_MENU_MAIN;
 +    audio_pause              = (nds_audio_pause)FUN_AUDIO_PAUSE;
-+    set_screen_menu_on =(nds_set_screen_menu_on)FUN_SET_SCREEN_MENU_ON;
++    set_screen_menu_on       = (nds_set_screen_menu_on)FUN_SET_SCREEN_MENU_ON;
 +    draw_menu_bg             = (nds_draw_menu_bg)FUN_DRAW_MENU_BG;
-+    set_font_narrow           = (nds_set_font_narrow)FUN_SET_FONT_NARROW;
-+    set_font_wide               = (nds_set_font_wide)FUN_SET_FONT_WIDE;
-+    update_screen_menu          = (nds_update_screen_menu)FUN_UPDATE_SCREEN_MENU;
++    set_font_narrow          = (nds_set_font_narrow)FUN_SET_FONT_NARROW;
++    set_font_wide            = (nds_set_font_wide)FUN_SET_FONT_WIDE;
++    update_screen_menu       = (nds_update_screen_menu)FUN_UPDATE_SCREEN_MENU;
 +    audio_revert_pause_state = (nds_audio_revert_pause_state)FUN_AUDIO_REVERT_PAUSE_STATE;
-+    config_update_settings      = (nds_config_update_settings)FUN_CONFIG_UPDATE_SETTINGS;
-+    set_screen_menu_off          = (nds_set_screen_menu_off)FUN_SET_SCREEN_MENU_OFF;
-+    reset_system                           = (nds_reset_system)FUN_RESET_SYSTEM;
++    config_update_settings   = (nds_config_update_settings)FUN_CONFIG_UPDATE_SETTINGS;
++    set_screen_menu_off      = (nds_set_screen_menu_off)FUN_SET_SCREEN_MENU_OFF;
++    reset_system             = (nds_reset_system)FUN_RESET_SYSTEM;
++    print_string                    = (nds_print_string)FUN_PRINT_STRING;
++    delay_us                        = (nds_delay_us)FUN_DELAY_US;   
++
++    action_select_menu = (nds_action_select_menu)FUN_ACTION_SELECT_MENU; // 임시로 추가
++     draw_menu_option = (nds_draw_menu_option)FUN_DRAW_MENU_OPTION;
++
++    printf("[trngaje] sdl_menu:param_1=0x%x, param_2=0x%x\n", param_1, param_2);
 +
 +    local_528 = *(uint *)(param_1 + 0x859b4);
 +    puVar1 = (uint *)(param_1 + 0x85568);
@@ -49540,6 +49152,16 @@ index 000000000..a6f069d33
 +        local_528 = local_528 - 1;
 +    }
 +    // 8bytes 를 합치는 루틴
++    //[trngaje] sdl_menu : 0x85580:0x7400000053
++    //[trngaje] sdl_menu : 0x85578:0x6100000072
++    //[trngaje] sdl_menu : 0x85570:0x4400000020
++    //[trngaje] sdl_menu : 0x85568:0x7200000044
++    //[trngaje] sdl_menu : local_520:0x74, 0x53,0x61,0x72, 0x44,0x20,0x72,0x44
++
++    //printf("[trngaje] sdl_menu : 0x85580:%p\n", (ulong)*(undefined8 *)(param_1 + 0x85580));
++    //printf("[trngaje] sdl_menu : 0x85578:%p\n", (ulong)*(undefined8 *)(param_1 + 0x85578));
++    //printf("[trngaje] sdl_menu : 0x85570:%p\n", (ulong)*(undefined8 *)(param_1 + 0x85570));
++    //printf("[trngaje] sdl_menu : 0x85568:%p\n", (ulong)*(undefined8 *)(param_1 + 0x85568));
 +/*
 +    local_520 = CONCAT17((char)((ulong)*(undefined8 *)(param_1 + 0x85580) >> 0x20),
 +                       CONCAT16((char)*(undefined8 *)(param_1 + 0x85580),
@@ -49563,12 +49185,21 @@ index 000000000..a6f069d33
 +    local_520[1] = (char)((ulong)*(undefined8 *)(param_1 + 0x85568) >> 0x20);
 +    local_520[0] = (char)*(undefined8 *)(param_1 + 0x85568);
 +
++    //printf("[trngaje] sdl_menu : local_520:0x%x, 0x%x,0x%x,0x%x, 0x%x,0x%x,0x%x,0x%x\n", 
++    //    local_520[7], local_520[6], local_520[5], local_520[4], local_520[3], local_520[2], local_520[1], local_520[0]);
++
 +    local_534 = 0;
 +    local_524 = 0;
 +    local_518 = (byte)*(undefined4 *)(param_1 + 0x85588);
 +    local_517 = (byte)*(undefined4 *)(param_1 + 0x8558c);
 +    local_516 = (byte)*(undefined4 *)(param_1 + 0x85590);
 +    local_410 = 0;
++
++    //[trngaje] sdl_menu : local_518=105, local_517=99, local_516=0
++    //[trngaje] sdl_menu : iVar7=0
++    
++    printf("[trngaje] sdl_menu : local_518=%d, local_517=%d, local_516=%d\n",  local_518, local_517, local_516);
++    printf("[trngaje] sdl_menu : iVar7=%d\n",  iVar7);
 +    if (iVar7 == 100000) {
 +        bVar8 = true;
 +        uVar5 = 1;
@@ -49615,57 +49246,144 @@ index 000000000..a6f069d33
 +    }
 +    else {
 +        local_538 = 1;
-+        pvVar12 = malloc(0x18000);
-+        local_550 = pvVar12;
++        pvVar13 = malloc(0x18000);
++        local_550 = pvVar13;
 +        local_548 = malloc(0x18000);
-+        screen_copy16(pvVar12,0);
++        screen_copy16(pvVar13,0);
 +        screen_copy16(local_548,1);
 +    }
 +    load_logo(&local_578);
-+    __ptr = (code **)create_menu_main(&local_578);
++    /*
++    [trngaje] sdl_create_menu_main++
++    SS: 800 480
++    [trngaje] 0x0
++    [SDL] sdl_print_string:p=Version r2.5.2.0, fg=0xffff, bg=0x0, x=352, y=201
++    */
++    __ptr = (undefined8 *)create_menu_main(&local_578);
++
++    printf("[trngaje] sdl_menu:step1\n");
 +    uStack_560 = 0;
 +    local_558 = 0;
 +    iStack_530 = 0;
 +    uStack_52c = 1;
 +    local_515[0] = 0;
 +    local_568 = __ptr;
++    printf("[trngaje] sdl_menu:step2\n");
 +    uVar6 = audio_pause(param_1 + 0x1586000);
++    printf("[trngaje] sdl_menu:step3\n");
 +    set_screen_menu_on();
++    printf("[trngaje] sdl_menu:step4\n");
 +    if (param_2 != 0) {
-+        iVar7 = load_file(&local_578,&nds_ext,auStack_408);
-+        lVar13 = local_578;
++        // 여긴 진입 안함
++        printf("[trngaje] sdl_menu:step5\n");
++        // nds_ext : 0015b3e0
++        iVar7 = load_file(&local_578, base_addr_rx + 0x0015b3e0/*&nds_ext*/,auStack_408);
++        printf("[trngaje] sdl_menu:step6: auStack_408=%s \n", auStack_408);
++        printf("[trngaje] sdl_menu:step6: local_578=%p \n", local_578);
++        lVar9 = local_578;
 +        if ((iVar7 != -1) && (iVar7 = load_nds(local_578 + 800,auStack_408), -1 < iVar7)) {
-+            local_528 = *(uint *)(lVar13 + 0x859b4);
++            printf("[trngaje] sdl_menu:step7\n");
++            local_528 = *(uint *)(lVar9 + 0x859b4);
 +            local_534 = 1;
 +            iStack_530 = 1;
 +            uStack_52c = 0;
 +        }
 +    }
-+    ppcVar11 = local_568;
-+LAB_000935e0:
-+    local_568 = ppcVar11;
-+    ppcVar4 = local_568;
++    puVar12 = local_568;
++    printf("[trngaje] sdl_menu:step8\n");
++LAB_000935e0: // loop 
++    local_568 = puVar12;
++    puVar4 = local_568;
 +    if ((iStack_530 == 0) || (*(char *)(param_1 + 0x8ab38) == '\0')) {
-+        delay_us("k");
++        printf("[trngaje] sdl_menu:step9\n");
++        //delay_us("k"); // 수정 필요함
++        delay_us(100000); 
++        printf("[trngaje] sdl_menu:step9-1\n");
 +        draw_menu_bg(&local_578);
++        printf("[trngaje] sdl_menu:step10\n");
 +        set_font_narrow();
-+        print_string(local_515,0xa676,0,0x10);
++        //print_string(local_515,0xa676,0,0x10); //error: too few arguments to function ‘print_string’
++        printf("[trngaje] sdl_menu:step11:local_515=0x%x\n", *local_515);
++        //[SDL] sdl_print_string:p=, fg=0xa676, bg=0x0, x=16, y=16
++        print_string(local_515,0xa676,0,0x10,0x10);
++         // 비교:sdl_print_string("Version r2.5.2.0",0xffff,0,uVar2,0xc9);
 +        set_font_wide();
-+        if (*(int *)((long)ppcVar4 + 0x14) != 0) {
-+            uVar10 = 0;
++        if (*(int *)((long)puVar4 + 0x14) != 0) {
++            printf("[trngaje] sdl_menu:step13:*(int *)((long)puVar4 + 0x14)=0x%x\n", *(int *)((long)puVar4 + 0x14)); // 전체 갯수 같은데..
++            printf("[trngaje] sdl_menu:step13:*(int *)(puVar4 + 3)=0x%x\n", *(int *)(puVar4 + 3)); 
++
++            uVar11 = 0; // 증가 값 초기화
 +            do {
-+                lVar13 = uVar10 * 8;
-+                iVar7 = (int)uVar10;
++                lVar9 = *(long *)(puVar4[4] + uVar11 * 8);
++                iVar7 = (int)uVar11;
 +                uVar5 = iVar7 + 1;
-+                uVar10 = (ulong)uVar5;
-+                (**(unsigned char **)(*(long *)(ppcVar4[4] + lVar13) + 0x10))
-+                          (&local_578,*(long *)(ppcVar4[4] + lVar13),*(int *)(ppcVar4 + 3) == iVar7);
-+            } while (uVar5 < *(uint *)((long)ppcVar4 + 0x14));
++                uVar11 = (ulong)uVar5;
++                //(**(code **)(lVar9 + 0x10))(&local_578,lVar9,*(int *)(puVar4 + 3) == iVar7); // callback 함수 정의 필요함
++                printf("[trngaje] sdl_menu:step13:lVar9 + 0x10=%p, iVar7=%d\n", lVar9 + 0x10, iVar7); 
++                printf("[trngaje] sdl_menu:step13:offset of (lVar9 + 0x10)=%p\n", lVar9 + 0x10 - base_addr_rx); 
++                // 아래 두개 함수는 결과가 같음
++                //(*(nds_func3_cb_t *)(lVar9 + 0x10))(&local_578,lVar9,*(int *)(puVar4 + 3) == iVar7);
++                draw_menu_option(&local_578,lVar9,*(int *)(puVar4 + 3) == iVar7);
++                // [SDL] sdl_print_string:p=Change Options, fg=0xffff, bg=0x17, x=180, y=280 이 값 대신
++                // 아래와 같이 읽혀짐. x값 이상
++                // [SDL] sdl_print_string:p=Change Options, fg=0xffff, bg=0x17, x=-1041775248, y=280
++
++/*
++// 정상적인 경우 아래와 같이 x 값이 180으로 출력되어야 함
++[SDL] sdl_print_string:p=Change Options, fg=0xffff, bg=0x17, x=180, y=280
++[SDL] sdl_print_string:p=Change Steward Options, fg=0xffff, bg=0x0, x=180, y=288
++[SDL] sdl_print_string:p=Configure Controls, fg=0xffff, bg=0x0, x=180, y=296
++[SDL] sdl_print_string:p=Configure Firmware, fg=0xffff, bg=0x0, x=180, y=304
++[SDL] sdl_print_string:p=Configure Cheats, fg=0xffff, bg=0x0, x=180, y=312
++[SDL] sdl_print_string:p=Load state   0, fg=0xffff, bg=0x0, x=180, y=320
++[SDL] sdl_print_string:p=Save state   0, fg=0xffff, bg=0x0, x=180, y=328
++[SDL] sdl_print_string:p=Load new game, fg=0xffff, bg=0x0, x=180, y=344
++[SDL] sdl_print_string:p=Restart game, fg=0xffff, bg=0x0, x=180, y=352
++[SDL] sdl_print_string:p=Return to game, fg=0xffff, bg=0x0, x=180, y=368
++[SDL] sdl_print_string:p=Exit DraStic-trngaje, fg=0xffff, bg=0x0, x=180, y=384
++*/
++
++            } while (uVar5 < *(uint *)((long)puVar4 + 0x14));
 +        }
-+        if (*ppcVar4 != (unsigned char *)0x0) {
-+            (**ppcVar4)(&local_578,ppcVar4);
++
++        if ((nds_func2_cb_t *)(*puVar4) != (nds_func2_cb_t *)0x0) {
++             printf("[trngaje] sdl_menu:step14:puVar4=%p, *puVar4=%p\n", puVar4, *puVar4);
++            // [trngaje] sdl_menu:step14:offset of*puVar4=0x8e2a0 : void draw_menu_main(void)
++/*
++                                 *************************************************************************
++                                 *                               FUNCTION                                *
++                                 *************************************************************************
++                                 undefined draw_menu_main()
++               undefined            w0:1             <RETURN>
++                                 draw_menu_main                                          XREF[3]:       Entry Point(*), 
++                                                                                                         create_menu_main:00092d08(*), 
++                                                                                                         create_menu_main:00092d14(*)  
++           0008e2a0 c0 03 5f d6       ret
++           0008e2a4 1f                ??           1Fh
++           0008e2a5 20                ??           20h     
++           0008e2a6 03                ??           03h
++           0008e2a7 d5                ??           D5h
++           0008e2a8 1f                ??           1Fh
++           0008e2a9 20                ??           20h     
++           0008e2aa 03                ??           03h
++           0008e2ab d5                ??           D5h
++           0008e2ac 1f                ??           1Fh
++           0008e2ad 20                ??           20h     
++           0008e2ae 03                ??           03h
++           0008e2af d5                ??           D5h
++*/
++             printf("[trngaje] sdl_menu:step14:offset of*puVar4=%p\n", (*puVar4) - base_addr_rx);
++            //(*(code *)*puVar4)(&local_578,puVar4); // callback 함수 정의 필요함
++
++
++
++
++            //아래 함수 호출시 죽음
++            //(*(nds_func2_cb_t *)(*puVar4))(&local_578, puVar4);
 +        }
-+        lVar13 = *(long *)(ppcVar4[4] + (ulong)*(uint *)(ppcVar4 + 3) * 8);
++        printf("[trngaje] sdl_menu:step14-3\n");
++        lVar9 = *(long *)(puVar4[4] + (ulong)*(uint *)(puVar4 + 3) * 8);
++        printf("[trngaje] sdl_menu:step15\n");
 +        update_screen_menu();
 +        if (local_410 == 0) {
 +            lVar2 = local_578 + 0x5528;
@@ -49673,84 +49391,109 @@ index 000000000..a6f069d33
 +                get_gui_input(lVar2,local_580);
 +            } while (local_580[0] == 0xb);
 +        }
-+        ppcVar11 = local_568;
-+        if (*(unsigned char **)(lVar13 + 0x18) != (unsigned char *)0x0) {
-+            iVar7 = (**(unsigned char **)(lVar13 + 0x18))(&local_578,lVar13,local_580);
-+            ppcVar11 = local_568;
-+            if (iVar7 != 1) {
-+                if (iVar7 != 0) {
-+                    if (iVar7 == 5) {
-+                        if (*(unsigned char **)(lVar13 + 0x20) != (unsigned char *)0x0) {
-+                            (**(unsigned char **)(lVar13 + 0x20))(&local_578,lVar13,1);
++        printf("[trngaje] sdl_menu:step16\n");
++        puVar12 = local_568;
++        if (*(nds_func3_cb_t **)(lVar9 + 0x18) != (nds_func3_cb_t *)0x0) {
++            printf("[trngaje] sdl_menu:step17:lVar9 + 0x18=%p\n", lVar9 + 0x18);
++            printf("[trngaje] sdl_menu:step17:offset of (lVar9 + 0x18)=%p\n", (lVar9 + 0x18) - base_addr_rx);
++            //iVar7 = (**(code **)(lVar9 + 0x18))(&local_578,lVar9,local_580); // callback 함수 정의 필요함
++            // 여기 아래도 죽음 : int action_select_menu(long param_1,long param_2,int *param_3) 이 함수 일까?
++            //iVar7 = (**(nds_func3r_2nd_cb_t **)(lVar9 + 0x18))(&local_578,lVar9,local_580);
++            iVar7 = action_select_menu(&local_578,lVar9,local_580);
++
++            puVar12 = local_568;
++            printf("[trngaje] sdl_menu:step18:iVar7=%d\n",iVar7); // 0:up, 1:down, 2:left, 3:right return 됨
++            if (iVar7 != DRASTIC_GUI_INPUT_DOWN) { // 1
++                if (iVar7 != DRASTIC_GUI_INPUT_UP) { // 0
++                    if (iVar7 == DRASTIC_GUI_INPUT_B) { // 5
++                        if (*(nds_func3_cb_t **)(lVar9 + 0x20) != (nds_func3_cb_t *)0x0) {
++                            //(**(code **)(lVar9 + 0x20))(&local_578,lVar9,1);
++                            (**(nds_func3_cb_t **)(lVar9 + 0x20))(&local_578,lVar9,1);
 +                        }
-+                        if (ppcVar11[1] != (unsigned char *)0x0) {
-+                            (*ppcVar11[1])(&local_578,ppcVar11,1);
++                        if ((nds_func3_cb_t *)puVar12[1] != (nds_func3_cb_t *)0x0) {
++                            //(*(code *)puVar12[1])(&local_578,puVar12,1);
++                            (*(nds_func3_cb_t *)puVar12[1])(&local_578,puVar12,1);
 +                        }
-+                        ppcVar11 = (unsigned char **)ppcVar11[5];
-+                        if (ppcVar11 == (unsigned char **)0x0) {
-+                            ppcVar11 = local_568;
++                        puVar12 = (undefined8 *)puVar12[5];
++                        if (puVar12 == (undefined8 *)0x0) {
++                            puVar12 = local_568;
 +                            if (*(char *)(local_578 + 0x8ab38) != '\0') {
 +                                iStack_530 = 1;
 +                            }
 +                        }
-+                        else if (ppcVar11[1] != (unsigned char *)0x0) {
-+                            (*ppcVar11[1])(&local_578,ppcVar11,0);
++                        else if ((nds_func3_cb_t *)puVar12[1] != (nds_func3_cb_t *)0x0) {
++                            //(*(code *)puVar12[1])(&local_578,puVar12,0); // callback 함수 정의 필요함
++                            (*(nds_func3_cb_t *)puVar12[1])(&local_578,puVar12,0);
 +                        }
 +                    }
 +                    goto LAB_000935e0;
 +                }
 +                iVar7 = -1;
 +            }
-+            iVar3 = *(int *)(ppcVar4 + 3);
-+            if (*(unsigned char **)(lVar13 + 0x20) != (unsigned char *)0x0) {
-+                (**(unsigned char **)(lVar13 + 0x20))(&local_578,lVar13,1);
++            iVar3 = *(int *)(puVar4 + 3); 
++            printf("[trngaje] iVar3=0x%x\n", iVar3);
++            if (*(nds_func3_cb_t **)(lVar9 + 0x20) != (nds_func3_cb_t *)0x0) {
++                 printf("[trngaje] offset of lVar9 + 0x20=%p\n", lVar9 + 0x20 - base_addr_rx);
++                //(**(code **)(lVar9 + 0x20))(&local_578,lVar9,1);
++                (**(nds_func3_cb_t **)(lVar9 + 0x20))(&local_578,lVar9,1);
 +            }
-+            uVar5 = *(uint *)((long)ppcVar4 + 0x14) - 1;
++            uVar5 = *(uint *)((long)puVar4 + 0x14) - 1;
 +            if (-1 < iVar7 + iVar3) {
 +                uVar5 = iVar7 + iVar3;
 +            }
-+            if (uVar5 < *(uint *)((long)ppcVar4 + 0x14)) {
-+                uVar10 = -(ulong)(uVar5 >> 0x1f) & 0xfffffff800000000 | (ulong)uVar5 << 3;
++            if (uVar5 < *(uint *)((long)puVar4 + 0x14)) {
++                uVar11 = -(ulong)(uVar5 >> 0x1f) & 0xfffffff800000000 | (ulong)uVar5 << 3;
 +            }
 +            else {
 +                uVar5 = 0;
-+                uVar10 = 0;
++                uVar11 = 0;
 +            }
-+            lVar13 = *(long *)(ppcVar4[4] + uVar10);
-+            pcVar9 = (nds_unknown1_func)*(unsigned char **)(lVar13 + 0x20);
-+            *(uint *)(ppcVar4 + 3) = uVar5;
-+            ppcVar11 = local_568;
-+            if (pcVar9 != (unsigned char *)0x0) {
-+                (*pcVar9)(&local_578,lVar13,0);
-+                ppcVar11 = local_568;
++            lVar9 = *(long *)(puVar4[4] + uVar11);
++            //pcVar10 = *(nds_func3_cb_t **)(lVar9 + 0x20);
++            pcVar10 = *(nds_func3_cb_t **)(lVar9 + 0x20);
++
++            printf("[trngaje] uVar5=0x%x, uVar11=0x%x\n", uVar5, uVar11);
++            printf("[trngaje] offset of pcVar10=%p\n", pcVar10 - base_addr_rx);
++            *(uint *)(puVar4 + 3) = uVar5; //  여기서 커서 위치 갱신 하는 부분 일  듯
++            puVar12 = local_568;
++            if (pcVar10 != (nds_func3_cb_t *)0x0) {
++                (*pcVar10)(&local_578,lVar9,0); // callback 함수 정의 필요함
++                puVar12 = local_568;
 +            }
 +        }
-+        goto LAB_000935e0;
++        goto LAB_000935e0; // loop 시작으로 
 +    }
++    printf("[trngaje] sdl_menu:step19\n");
 +    audio_revert_pause_state(param_1 + 0x1586000,uVar6);
 +    do {
 +        get_gui_input(local_578 + 0x5528,local_580);
 +    } while (local_580[0] != 0xb);
++    printf("[trngaje] sdl_menu:step20\n");
 +    clear_gui_actions();
-+    uVar10 = 0;
++    uVar11 = 0;
 +    if (*(int *)((long)__ptr + 0x14) != 0) {
++        printf("[trngaje] sdl_menu:step21\n");
 +        do {
 +            while( true ) {
-+                pvVar12 = *(void **)(__ptr[4] + uVar10 * 8);
-+                if (*(unsigned char **)((long)pvVar12 + 0x28) == (unsigned char *)0x0) break;
-+                (**(unsigned char **)((long)pvVar12 + 0x28))(&local_578,pvVar12);
-+                uVar5 = (int)uVar10 + 1;
-+                uVar10 = (ulong)uVar5;
-+                free(pvVar12);
++                pvVar13 = *(void **)(__ptr[4] + uVar11 * 8);
++                if (*(nds_func2_cb_t **)((long)pvVar13 + 0x28) == (nds_func2_cb_t *)0x0) break;
++                //(**(code **)((long)pvVar13 + 0x28))(&local_578,pvVar13); // callback 함수 정의 필요함
++                (**(nds_func2_cb_t **)((long)pvVar13 + 0x28))(&local_578,pvVar13);
++
++                uVar5 = (int)uVar11 + 1;
++                uVar11 = (ulong)uVar5;
++                free(pvVar13);
 +                if (*(uint *)((long)__ptr + 0x14) <= uVar5) goto LAB_00093834;
 +            }
-+            uVar5 = (int)uVar10 + 1;
-+            uVar10 = (ulong)uVar5;
-+            free(pvVar12);
++            uVar5 = (int)uVar11 + 1;
++            uVar11 = (ulong)uVar5;
++            free(pvVar13);
 +        } while (uVar5 < *(uint *)((long)__ptr + 0x14));
 +    }
++    printf("[trngaje] sdl_menu:step22\n");
 +LAB_00093834:
-+    free(__ptr[4]);
++    printf("[trngaje] sdl_menu:step23\n");
++    free((void *)__ptr[4]);
 +    free(__ptr);
 +    uVar5 = local_528;
 +    if (1 < local_528) {
@@ -49760,7 +49503,7 @@ index 000000000..a6f069d33
 +    uVar5 = local_524;
 +    if (local_524 != 0) {
 +        uVar5 = 0;
-+// base_addr_rx + 0x00135150
++        // base_addr_rx + 0x00135150
 +        //if (*(uint *)(speed_override_values.11641 + (ulong)local_524 * 4) != 0) {
 +        if (*(uint *)((base_addr_rx + 0x00135150) + (ulong)local_524 * 4) != 0) {
 +            //uVar5 = 5000000 / *(uint *)(speed_override_values.11641 + (ulong)local_524 * 4);
@@ -49779,22 +49522,28 @@ index 000000000..a6f069d33
 +    local_570[8] = (uint)local_518;
 +    local_570[9] = (uint)local_517;
 +    local_570[10] = (uint)local_516;
++    printf("[trngaje] sdl_menu:step24\n");
 +    config_update_settings(puVar1);
++    printf("[trngaje] sdl_menu:step25\n");
 +    set_screen_menu_off();
 +    if (local_540 != (void *)0x0) {
 +        free(local_540);
 +    }
 +    if (local_534 != 0) {
++        printf("[trngaje] sdl_menu:step26\n");
 +        reset_system(param_1);
 +    }
-+
++    printf("[trngaje] sdl_menu:step27\n");
 +    // base_addr_rx + 003f6000
 +    nds_system = (unsigned char *)(base_addr_rx + 0x003f6000);
 +    nds_system[param_1 + 0x37339a3] = 1;
++    printf("[trngaje] sdl_menu:step28\n");
 +    if (local_538 != 0) {
++        printf("[trngaje] sdl_menu:step29\n");
 +        free(local_550);
 +        free(local_548);
 +        if (local_534 != 0) {
++            printf("[trngaje] sdl_menu:step30\n");
 +            puts("Performing long jmp to reset.");
 +                    /* WARNING: Subroutine does not return */
 +            __longjmp_chk(param_1 + 0x3b29840,0);
@@ -49804,7 +49553,7 @@ index 000000000..a6f069d33
 +                    /* WARNING: Subroutine does not return */
 +   // __stack_chk_fail();
 +  //}
-+#endif
++    printf("[trngaje] sdl_menu--\n");
 +    return;	
 +}
 +
@@ -50000,13 +49749,164 @@ index 000000000..a6f069d33
 +    printf("[trngaje] sdl_platform_get_config_input:uVar3=0x%x(%d)\n", uVar3, uVar3);
 +    goto LAB_0009b378;
 +}
++
++
++void sdl_draw_menu_main(long *param1, long *param2) {
++    printf("[trngaje] sdl_draw_menu_main++");
++    
++    printf("[trngaje] sdl_draw_menu_main--");
++}
++
++void sdl_draw_menu_option(long param_1,undefined8 *param_2,int param_3)
++{
++    nds_print_string                       print_string;
++    
++    print_string                    = (nds_print_string)FUN_PRINT_STRING;
++
++    if (param_3 != 0) {
++        param_3 = 0x17;
++    }
++
++    printf("[trngaje] sdl_draw_menu_option:x=%d\n", *(undefined4 *)(*(long *)(param_1 + 0x10) + 0x10)); // 이 변수 값 쓰레기 값이 채워져 있음
++    print_string(*param_2,0xffff,param_3, 180/* *(undefined4 *)(*(long *)(param_1 + 0x10) + 0x10) */,
++        *(int *)(param_2 + 1) << 3);
++    return;
++}
++
++void process_displaylayout(int x, int y, int w, int h)
++{
++    SDL_Rect rtBG, rtS0, rtS1, rt;
++    unsigned char  ucLayoutType;
++    unsigned short  usLayoutRotate;
++    char buf[256];
++    char *bg;
++    char *name;
++    unsigned char ucLayoutIndex;
++
++    usLayoutRotate = getlayout_rotate(nds.hres_mode, g_advdrastic.ucLayoutIndex[nds.hres_mode]);
++    ucLayoutType = getlayout_type(nds.hres_mode, g_advdrastic.ucLayoutIndex[nds.hres_mode]);
++
++    getlayout_size(nds.hres_mode, g_advdrastic.ucLayoutIndex[nds.hres_mode], 0, &rtS0);
++    getlayout_size(nds.hres_mode, g_advdrastic.ucLayoutIndex[nds.hres_mode], 1, &rtS1);
++
++    // draw bg
++    rtBG.x = x;
++    rtBG.y = y;
++    rtBG.w = w;
++    rtBG.h = h;
++    SDL_FillRect(cvt, &rtBG, SDL_MapRGB(cvt->format, 0x00, 0x80, 0x00));
++
++    if  (ucLayoutType == LAYOUT_TYPE_TRANSPARENT) {
++        // draw screen1
++        rt.x = x + w * rtS1.x / g_advdrastic.iDisplay_width;
++        rt.y = y + h * rtS1.y / g_advdrastic.iDisplay_height;
++        rt.w = w * rtS1.w / g_advdrastic.iDisplay_width;
++        rt.h = h * rtS1.h / g_advdrastic.iDisplay_height;
++        SDL_FillRect(cvt, &rt, SDL_MapRGB(cvt->format, 0x00, 0x00, 0x80));
++
++        switch (nds.alpha.pos) {
++        case 0:
++            rtS0.x = g_advdrastic.iDisplay_width - rtS0.w;
++            rtS0.y = 0;
++            break;
++        case 1:
++            rtS0.x = 0;
++            rtS0.y = 0;
++            break;
++        case 2:
++            rtS0.x = 0;
++            rtS0.y = g_advdrastic.iDisplay_height - rtS0.h;
++            break;
++        case 3:
++            rtS0.x = g_advdrastic.iDisplay_width - rtS0.w;
++            rtS0.y = g_advdrastic.iDisplay_height - rtS0.h;
++            break;
++        }
++
++        // draw screen0
++        rt.x = x + w * rtS0.x / g_advdrastic.iDisplay_width;
++        rt.y = y + h * rtS0.y / g_advdrastic.iDisplay_height;
++        rt.w = w * rtS0.w / g_advdrastic.iDisplay_width;
++        rt.h = h * rtS0.h / g_advdrastic.iDisplay_height;
++        SDL_FillRect(cvt, &rt, SDL_MapRGB(cvt->format, 0x80, 0x00, 0x00));
++    }
++    else if  (ucLayoutType == LAYOUT_TYPE_VERTICAL) {
++        // draw screen0
++        rt.x = x + w * rtS0.x / g_advdrastic.iDisplay_width;
++        rt.y = y + h * rtS0.y / g_advdrastic.iDisplay_height;
++        rt.w = w * rtS0.h / g_advdrastic.iDisplay_width;
++        rt.h = h * rtS0.w / g_advdrastic.iDisplay_height;
++        SDL_FillRect(cvt, &rt, SDL_MapRGB(cvt->format, 0x80, 0x00, 0x00));
++
++        // draw screen1
++        rt.x = x + w * rtS1.x / g_advdrastic.iDisplay_width;
++        rt.y = y + h * rtS1.y / g_advdrastic.iDisplay_height;
++        rt.w = w * rtS1.h / g_advdrastic.iDisplay_width;
++        rt.h = h * rtS1.w / g_advdrastic.iDisplay_height;
++        SDL_FillRect(cvt, &rt, SDL_MapRGB(cvt->format, 0x00, 0x00, 0x80));
++
++    }
++    else {
++        // draw screen0
++        rt.x = x + w * rtS0.x / g_advdrastic.iDisplay_width;
++        rt.y = y + h * rtS0.y / g_advdrastic.iDisplay_height;
++        rt.w = w * rtS0.w / g_advdrastic.iDisplay_width;
++        rt.h = h * rtS0.h / g_advdrastic.iDisplay_height;
++        SDL_FillRect(cvt, &rt, SDL_MapRGB(cvt->format, 0x80, 0x00, 0x00));
++
++        // draw screen1
++        rt.x = x + w * rtS1.x / g_advdrastic.iDisplay_width;
++        rt.y = y + h * rtS1.y / g_advdrastic.iDisplay_height;
++        rt.w = w * rtS1.w / g_advdrastic.iDisplay_width;
++        rt.h = h * rtS1.h / g_advdrastic.iDisplay_height;
++        SDL_FillRect(cvt, &rt, SDL_MapRGB(cvt->format, 0x00, 0x00, 0x80));
++    }   
++
++    // draw infos of layout
++    bg = getlayout_bg(nds.hres_mode, g_advdrastic.ucLayoutIndex[nds.hres_mode]);
++    name = getlayout_name(nds.hres_mode, g_advdrastic.ucLayoutIndex[nds.hres_mode]);
++    ucLayoutIndex=getlayout_index(nds.hres_mode, g_advdrastic.ucLayoutIndex[nds.hres_mode]);
++
++    sprintf(buf, "index:%d, name=%s", ucLayoutIndex,
++        name);
++    draw_info(cvt, buf, g_advdrastic.iDisplay_width * 0.5,  g_advdrastic.iDisplay_height * 0.5, nds.menu.c1, 0);
++
++    sprintf(buf, "bg=%s", bg);
++    draw_info(cvt, buf, g_advdrastic.iDisplay_width * 0.5,  g_advdrastic.iDisplay_height * 0.6, nds.menu.c1, 0);
++
++    sprintf(buf, "s0:%dx%d, s1:%dx%d", rtS0.w, rtS0.h, rtS1.w, rtS1.h);
++    draw_info(cvt, buf, g_advdrastic.iDisplay_width * 0.5,  g_advdrastic.iDisplay_height * 0.7, nds.menu.c1, 0);
++}
++
++void sdl_set_screen_menu_on(void)
++{
++    __printf_chk(1,"[trngaje] sdl_set_screen_menu_on: %d %d\n",800,0x1e0);
++    //SDL_SetWindowFullscreen(DAT_03f2a578,1);
++    //SDL_SetWindowFullscreen(*((uint64_t *)(base_addr_rx + 0x03f2a578)), 1); 
++
++    //SDL_RenderSetLogicalSize(DAT_03f2a580,800,0x1e0);
++    SDL_RenderSetLogicalSize(*((uint64_t *)(base_addr_rx + 0x03f2a580)) , 800, 0x1e0);
++
++    //if (DAT_03f2a588 == 0) { 
++    if (*((uint64_t *)(base_addr_rx + 0x03f2a588)) == 0) { 
++        *((uint64_t *)(base_addr_rx + 0x03f2a588))  /*DAT_03f2a588*/ = SDL_CreateTexture(*((uint64_t *)(base_addr_rx + 0x03f2a588)) /*DAT_03f2a580*/, 0x15151002, 1, 800, 0x1e0);
++    }
++    //clear_screen();
++    if (*((uint64_t *)(base_addr_rx + 0x03f2a5a0)) /*DAT_03f2a5a0*/ != (void *)0x0) { 
++        *((uint64_t *)(base_addr_rx + 0x03f2a5e0)) /*DAT_03f2a5e0*/ = 1;
++    return;
++    }
++    *((uint64_t *)(base_addr_rx + 0x03f2a5a0)) /*DAT_03f2a5a0*/ = malloc(0xbb800);
++    *((uint64_t *)(base_addr_rx + 0x03f2a5e0)) /*DAT_03f2a5e0*/ = 1;
++    return;
++}
 \ No newline at end of file
 diff --git a/src/video/drastic_video.h b/src/video/drastic_video.h
 new file mode 100644
-index 000000000..8c0d4ae02
+index 000000000..8614b67d4
 --- /dev/null
 +++ b/src/video/drastic_video.h
-@@ -0,0 +1,513 @@
+@@ -0,0 +1,568 @@
 +/*
 +    Special customized version for the DraStic emulator that runs on
 +    rg35xx, rg40xx, rg28xx handhelds.
@@ -50467,6 +50367,9 @@ index 000000000..8c0d4ae02
 +    unsigned int uiUseSAVformat;
 +    unsigned int uiRotateDPAD;
 +    unsigned int uiRotateButtons;
++    unsigned int uiEnableautosavestate;
++    unsigned int uiSlotOfAutosavestate;
++
 +    char cBackupFileName[2080];
 +    int iDisplay_width;
 +    int iDisplay_height;
@@ -50505,10 +50408,61 @@ index 000000000..8c0d4ae02
 +    NUM_OF_LAYOUT_TYPE
 +};
 +
++enum DRASTIC_GUI_INPUT_ENUM {
++    DRASTIC_GUI_INPUT_UP=0, 
++    DRASTIC_GUI_INPUT_DOWN,
++    DRASTIC_GUI_INPUT_LEFT, 
++    DRASTIC_GUI_INPUT_RIGHT,
++    DRASTIC_GUI_INPUT_A,
++    DRASTIC_GUI_INPUT_B,
++
++    NUM_OF_DRASTIC_GUI_INPUT
++};
++
++enum DRASTIC_MENU_OPTIONS_ENUM {
++    DRASTIC_MENU_OPTIONS_FRAME_SKIP_TYPE=0, 
++    DRASTIC_MENU_OPTIONS_FRAME_SKIP_VALUE,
++    DRASTIC_MENU_OPTIONS_SAFE_FRAME_SKIPPING, 
++    DRASTIC_MENU_OPTIONS_SCREEN_ORIENTATION,
++    DRASTIC_MENU_OPTIONS_SCREEN_SWAP,
++    
++    DRASTIC_MENU_OPTIONS_SHOW_SPEED,
++    DRASTIC_MENU_OPTIONS_ENABLE_SOUND,
++    DRASTIC_MENU_OPTIONS_FAST_FORWARD,
++    DRASTIC_MENU_OPTIONS_MIRROR_TOUCHSCREEN,
++    DRASTIC_MENU_OPTIONS_COMPRESS_SAVESTATES,
++    
++    DRASTIC_MENU_OPTIONS_SNAPSHOT_IN_SAVESTATES,
++    DRASTIC_MENU_OPTIONS_ENABLE_CHEATS,
++    DRASTIC_MENU_OPTIONS_UNCOMPRESS_ROMS,
++    DRASTIC_MENU_OPTIONS_BACKUP_IN_SAVESTATES,
++    DRASTIC_MENU_OPTIONS_SPEED_OVERRIDE,
++
++    DRASTIC_MENU_OPTIONS_FIX_MAIN_2D_SCREEN,
++    DRASTIC_MENU_OPTIONS_DISABLE_EDGE_MARKING,
++    DRASTIC_MENU_OPTIONS_SLOT_2_DEVICE,
++    DRASTIC_MENU_OPTIONS_HIGH_RESOLUTION_3D,
++    DRASTIC_MENU_OPTIONS_THREADED_3D,
++         
++    DRASTIC_MENU_OPTIONS_USE_RAW_SAV_FORMAT,
++    DRASTIC_MENU_OPTIONS_ROATE_DPAD,
++    DRASTIC_MENU_OPTIONS_ROATE_BUTTONS,
++    DRASTIC_MENU_OPTIONS_AUTO_SAVESTATE,
++    DRASTIC_MENU_OPTIONS_AUTO_SAVESTATE_SLOT,
++
++    DRASTIC_MENU_OPTIONS_DELETE_GAME_SPECIFIC_CONFIG,
++    DRASTIC_MENU_OPTIONS_EXIT_SAVE_FOR_ALL_GAMES,    
++    DRASTIC_MENU_OPTIONS_EXIT_SAVE_FOR_THIS_GAME,
++    DRASTIC_MENU_OPTIONS_EXIT_WITHOUT_SAVING,
++    NUM_OF_MENU_OPTIONS
++};
++
 +// prototype for detour functions
 +void sdl_select_load_game(long *param_1);
 +void sdl_menu(long param_1,int param_2);
 +void sdl_draw_numeric_labeled(long param_1,undefined8 *param_2,int param_3);
++void sdl_draw_menu_option(long param_1,undefined8 *param_2,int param_3);
++void sdl_set_screen_menu_on(void);
 +
 +unsigned char ** sdl_create_menu_options(long param_1,unsigned char *param_2);
 +ulong sdl_platform_get_config_input(void);
@@ -50517,15 +50471,16 @@ index 000000000..8c0d4ae02
 +//static int draw_drastic_menu_option(void);
 +
 +void process_input_toggle_dpad_mouse(void);
++void process_displaylayout(int x, int y, int w, int h);
 +
 +#endif
 +
 diff --git a/src/video/jsonlayout.c b/src/video/jsonlayout.c
 new file mode 100644
-index 000000000..d9c8b31cf
+index 000000000..ea1865b9a
 --- /dev/null
 +++ b/src/video/jsonlayout.c
-@@ -0,0 +1,229 @@
+@@ -0,0 +1,234 @@
 +// 이 프로그램은 drastic layout 출력을 위해서 설정 값 관리를 위한 루틴입니다.
 +
 +#include "jsonlayout.h"
@@ -50702,6 +50657,11 @@ index 000000000..d9c8b31cf
 +    }
 +}
 +
++char *getlayout_name(int ihighres, int i)
++{
++    return (g_theme.layout[ihighres][i].name);
++}
++
 +char *getlayout_bg(int ihighres, int i)
 +{
 +    return (g_theme.layout[ihighres][i].bg);
@@ -50758,10 +50718,10 @@ index 000000000..d9c8b31cf
 \ No newline at end of file
 diff --git a/src/video/jsonlayout.h b/src/video/jsonlayout.h
 new file mode 100644
-index 000000000..fb0e78aa8
+index 000000000..c42d1f1a8
 --- /dev/null
 +++ b/src/video/jsonlayout.h
-@@ -0,0 +1,52 @@
+@@ -0,0 +1,53 @@
 +#ifndef _JSONLAYOUT_H
 +#define _JSONLAYOUT_H
 +
@@ -50806,6 +50766,7 @@ index 000000000..fb0e78aa8
 +
 +int getjsonlayout_initialize(const char *strjsonlayoutfile);
 +void printjsonlayout(void);
++char *getlayout_name(int ihighres, int i);
 +char *getlayout_bg(int ihighres, int i);
 +void getlayout_size(int ihighres, int i, int screenid, SDL_Rect * rt);
 +unsigned char getlayout_type(int ihighres, int i);

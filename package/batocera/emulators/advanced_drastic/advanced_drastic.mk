@@ -4,7 +4,7 @@
 #
 ################################################################################
 
-ADVANCED_DRASTIC_VERSION = 34b5f38d7124b614ada69cc14f284db57e78084b
+ADVANCED_DRASTIC_VERSION = eaf41ab9bc8adcc15c010bf9517bc94c38e7bffd
 ADVANCED_DRASTIC_SITE = $(call github,trngaje,advanced_drastic,$(ADVANCED_DRASTIC_VERSION))
 ADVANCED_DRASTIC_DEPENDENCIES = drastic_layout sdl2_drastic
 
