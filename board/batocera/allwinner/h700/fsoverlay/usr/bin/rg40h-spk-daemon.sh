@@ -16,7 +16,10 @@ fi
 # For now, poll spk_state (0 -> headphones plugged, 1 -> headphones unplugged)
 # and swap DACL and DACR when the state changes.
 
+
 LAST_STATE=""
+
+sleep 5 # Wait for boot processes to finish
 
 while true; do
 	STATE="$(cat /sys/class/power_supply/axp2202-battery/spk_state)"
@@ -41,3 +44,5 @@ while true; do
 	LAST_STATE="$STATE"
 	sleep 1
 done
+
+exit 0

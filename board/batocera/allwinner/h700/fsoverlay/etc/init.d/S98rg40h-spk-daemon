@@ -9,8 +9,8 @@
 # For now, poll spk_state (0 -> headphones plugged, 1 -> headphones unplugged)
 # and swap DACL and DACR when the state changes.
 
-DAEMON=/usr/bin/battery-saver.sh
-PIDFILE=/var/run/battery-saver.pid
+DAEMON=/usr/bin/rg40h-spk-daemon.sh
+PIDFILE=/var/run/rg40h-spk-daemon.pid
 DAEMON_NAME=$(basename "$DAEMON")
 
 start_daemon() {
