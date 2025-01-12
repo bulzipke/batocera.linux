@@ -24,7 +24,7 @@ shutdown_system() {
     batocera-brightness dispoff
     amixer set Master mute
     batocera-es-swissknife --emukill
-    /usr/bin/poweroff.sh
+    knulli-shutdown -s
 }
 
 # Set starting state

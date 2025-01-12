@@ -26,7 +26,7 @@ shutdown_system() {
     echo 1 > /sys/kernel/debug/dispdbg/start
     amixer set Master mute
     batocera-es-swissknife --emukill
-    /usr/bin/poweroff.sh
+    knulli-shutdown -s
 }
 
 # Set starting state

@@ -16,7 +16,7 @@ LOCK="/var/run/battery-saver.lock"
 exec 200>"$LOCK"
 flock -n 200 || exit 1
 
-trap 'cleanup' SIGTERM
+trap 'cleanup' EXIT
 
 STATE="active"
 STATE_FLAG="/var/run/activity_state.flag"
@@ -24,12 +24,16 @@ BRIGHTNESS="$(batocera-brightness)"
 GOVERNOR=""
 SAVED_GOVERNOR=""
 
-# Called with SIGTERM
+# Called on exit
 cleanup() {
     if [ "$STATE" = "inactive" ] && [ -n "$BRIGHTNESS" ]; then
-    batocera-brightness "$BRIGHTNESS"
-    batocera-audio setSystemVolume unmute
-    echo "1" > "$STATE_FLAG"
+        batocera-brightness "$BRIGHTNESS"
+    fi
+
+    # Restore audio and state if exit while inactive but not duriung shutdown process
+    if [ ! -f /var/run/shutdown-normal.flag ] && [ ! -f /var/run/shutdown-ingame.flag ]; then
+        batocera-audio setSystemVolume unmute
+        echo "1" > "$STATE_FLAG"
     fi
 
     rm -f "$LOCK"
@@ -154,7 +158,7 @@ do_inactivity() {
             batocera-brightness dispoff
             amixer set Master mute
             batocera-es-swissknife --emukill
-            /usr/bin/poweroff.sh
+            knulli-shutdown -s
         ;;
     esac
 }
@@ -169,7 +173,7 @@ do_extended_inactivity() {
             batocera-brightness dispoff
             amixer set Master mute
             batocera-es-swissknife --emukill
-            /usr/bin/poweroff.sh
+            knulli-shutdown -s
         ;;
     esac
 }

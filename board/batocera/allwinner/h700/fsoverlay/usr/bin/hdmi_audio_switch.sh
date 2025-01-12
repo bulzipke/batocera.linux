@@ -9,7 +9,7 @@ check_ingame() {
     fi
 
     if [ "$HTTP_STATUS" -eq 201 ]; then
-        echo "An emulator is running, exiting."
+        # Game is not running
         return 1
     else
         return 0

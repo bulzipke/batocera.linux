@@ -1,0 +1,66 @@
+#!/bin/sh
+
+check_ingame() {
+    HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:1234/runningGame")
+
+    if [ "$HTTP_STATUS" -eq 201 ]; then
+        # Game is not running
+        return 1
+    else
+        return 0
+    fi
+}
+
+do_poweroff() {
+    POWEROFF=$1
+
+    # Lets hide what happens from the user during shutdown/reboot to make for a more seemless experience
+    batocera-brightness dispoff
+    amixer set Master mute
+
+    if check_ingame; then
+        touch /var/run/shutdown-ingame.flag
+        batocera-es-swissknife --emukill # Exits an emulator if one is running and is needed for auto save state on exit.
+    else
+        touch /var/run/shutdown-normal.flag
+    fi
+
+    if [ "$POWEROFF" = "reboot" ]; then
+        mount -o remount,rw /boot
+        echo "1" > /boot/restart.flag # So the system knows if it's restart or cold boot for the charging binary in rcS
+        sync
+        mount -o remount,ro /boot
+        reboot
+    else
+        sync
+
+        # Start a background process that waits for a timeout duration before forcing shutdown
+        ( sleep 5 && reboot -f -p ) &
+
+        # Try a clean shutdown
+        shutdown -Ph now
+
+        # If we reach this point, the shutdown was successful and we can kill the background job
+        kill $!
+    fi
+}
+
+case "$1" in
+    -s|--shutdown)
+        echo "Shutting down the system..."
+        do_poweroff
+        ;;
+    -r|--reboot)
+        echo "Rebooting the system..."
+        do_poweroff "reboot"
+        ;;
+    *)
+        echo "Invalid option."
+        echo "Usage:"
+        echo "  -s, --shutdown"
+        echo "  -r, --reboot"
+        exit 1
+        ;;
+esac
+
+exit 0
