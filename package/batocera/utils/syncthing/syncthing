@@ -11,9 +11,9 @@ start() {
 	# check if syncthing web ui should be accessible from outside (system.security.enabled=0)
     if [ "$SYNCTHING_SECURITY"  != "1" ] || [ -z $SYNCTHING_SECURITY ]
 	then
-		SYNCTHING_GUI="http://0.0.0.0:8384"
+		SYNCTHING_GUI="0.0.0.0:8384"
 	else
-		SYNCTHING_GUI="http://127.0.0.1:8384"
+		SYNCTHING_GUI="127.0.0.1:8384"
 	fi
 
 	# create config directory if not present
