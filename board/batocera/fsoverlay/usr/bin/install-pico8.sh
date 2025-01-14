@@ -17,18 +17,18 @@ PICO_8_ZIPFILE=$(ls -d /userdata/roms/pico8/pico-8*raspi*.zip 2>/dev/null | head
 
 if [ -z $PICO_8_ZIPFILE ] || [ ! -f "$PICO_8_ZIPFILE" ]; then
   echo "Please add the Raspberry Pi version of Pico-8 to roms/pico8 and try again."
-  exit 0
+  exit 2
 fi
 
 if [ ! -f "$PICO_8_ES_SYSTEMS_CONFIG" ]; then
   echo "Unable to install Pico-8: $PICO_8_ES_SYSTEMS_CONFIG missing."
-  exit 0
+  exit 2
 fi
 
 if [ -d "$PICO_DIR" ]; then
     echo "Pico-8 is already installed at $PICO_DIR."
     echo "If you want to reinstall Pico-8, please remove the Pico-8 folder from your BIOS folder."
-    exit 0
+    exit 1
 fi
 
 # Unzip Pico-8
@@ -38,22 +38,22 @@ unzip "$PICO_8_ZIPFILE" -d "$TEMP_INSTALL_DIR"
 # Make sure all required files have been unpacked.
 if [ ! -f $PICO_8_64_FILE ]; then
   echo "Unable to install Pico-8: $PICO_8_64_FILE missing."
-  exit 0
+  exit 2
 fi
 
 if [ ! -f $PICO_8_DYN_FILE ]; then
   echo "Unable to install Pico-8: $PICO_8_DYN_FILE missing."
-  exit 0
+  exit 2
 fi
 
 if [ ! -f $PICO_8_GPIO_FILE ]; then
   echo "Unable to install Pico-8: $PICO_8_GPIO_FILE missing."
-  exit 0
+  exit 2
 fi
 
 if [ ! -f $PICO_8_DAT_FILE ]; then
   echo "Unable to install Pico-8: $PICO_8_DAT_FILE missing."
-  exit 0
+  exit 2
 fi
 
 # Create BIOS folder.
