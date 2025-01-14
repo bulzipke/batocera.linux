@@ -1,8 +1,15 @@
 #!/bin/bash
 
+BOARD=$(cat /boot/boot/batocera.board)
+# We only want the script to run for these devices
+if [ "$BOARD" != "rg40xx-h" ] && [ "$BOARD" != "rg40xx-v" ] && [ "$BOARD" != "rg-cubexx" ] && [ "$BOARD" != "trimui-smart-pro" ] && [ "$BOARD" != "trimui-brick" ]; then
+    exit 1
+fi
+
 # Define RGB LED keys for batocera.conf
 KEY_LED_MODE="led.mode"
 KEY_LED_BRIGHTNESS="led.brightness"
+KEY_LED_BRIGHTNESS_ADAPTIVE="led.brightness.adaptive"
 KEY_LED_SPEED="led.speed"
 KEY_LED_COLOUR="led.colour"
 KEY_LED_COLOUR_RIGHT="led.colour.right"
@@ -32,6 +39,7 @@ MODE_BATTERY_CHARGING=4
 # Define some default RGB LED settings
 DEFAULT_LED_MODE=1
 DEFAULT_BRIGHTNESS=100
+DEFAULT_LED_BRIGHTNESS_ADAPTIVE=1
 DEFAULT_SPEED=15
 DEFAULT_COLOUR=(148 255 0)
 DEFAULT_BATTERY_LOW_THRESHOLD=20
@@ -42,9 +50,6 @@ DEFAULT_BATTERY_CHARGING_ENABLED=1
 BATTERY_WARNING_MODE=2
 BATTERY_WARNING_COLOUR=(255 255 0)
 BATTERY_DANGER_COLOUR=(255 0 0)
-
-# Path to HDMI values
-HDMI_DIR="/sys/devices/platform/soc/6000000.hdmi/extcon/hdmi/state"
 
 # Paths to battery values
 BATTERY_DIR=$(ls -d /sys/class/power_supply/*{BAT,bat}* 2>/dev/null | head -1)
@@ -101,6 +106,7 @@ initializeLedValues() {
   # Read existing LED settings from batocera.conf
   LED_MODE=$(batocera-settings-get $KEY_LED_MODE)
   LED_BRIGHTNESS=$(batocera-settings-get $KEY_LED_BRIGHTNESS)
+  LED_BRIGHTNESS_ADAPTIVE=$(batocera-settings-get $KEY_LED_BRIGHTNESS_ADAPTIVE)
   LED_SPEED=$(batocera-settings-get $KEY_LED_SPEED)
   LED_COLOUR=($(batocera-settings-get $KEY_LED_COLOUR))
   LED_BATTERY_LOW_THRESHOLD=($(batocera-settings-get $KEY_LED_BATTERY_LOW_THRESHOLD))
@@ -112,6 +118,9 @@ initializeLedValues() {
   fi
   if [[ ! -n $LED_BRIGHTNESS ]] || [ $LED_BRIGHTNESS -lt 0 ] || [ $LED_BRIGHTNESS -gt 255 ]; then
     batocera-settings-set $KEY_LED_BRIGHTNESS $DEFAULT_BRIGHTNESS
+  fi
+  if [[ ! -n $LED_BRIGHTNESS_ADAPTIVE ]] || [ $LED_BRIGHTNESS_ADAPTIVE -lt 0 ] || [ $LED_BRIGHTNESS_ADAPTIVE -gt 1 ]; then
+    batocera-settings-set $KEY_LED_BRIGHTNESS_ADAPTIVE $DEFAULT_LED_BRIGHTNESS_ADAPTIVE
   fi
   if [[ ! -n $LED_SPEED ]] || [ -z $LED_SPEED ] || [ $LED_SPEED -lt 0 ] || [ $LED_SPEED -gt 255 ]; then
     batocera-settings-set $KEY_LED_SPEED $DEFAULT_SPEED
@@ -211,28 +220,27 @@ readBatteryValues() {
 updateAppliedBrightness() {
 
     # Retrieve LED brightness from batocera.conf
-    LED_BRIGHTNESS=$(batocera-settings-get $KEY_LED_BRIGHTNESS)
+  LED_BRIGHTNESS=$(batocera-settings-get $KEY_LED_BRIGHTNESS)
+  LED_BRIGHTNESS_ADAPTIVE=$(batocera-settings-get $KEY_LED_BRIGHTNESS_ADAPTIVE)
+
+  if [ $LED_BRIGHTNESS_ADAPTIVE -eq 1 ]; then
 
     # Determine current screen brightness:
     SCREEN_BRIGHTNESS_PERCENT=$(batocera-brightness)
 
     # Determine current HDMI state:
-    HDMI_STATE="none"
-    if [ ! -z $HDMI_DIR ] && [ -f $HDMI_DIR ]; then
-      HDMI_STATE="$(cat $HDMI_DIR)"
-    fi
-    
+    HDMI_STATE="$(cat /sys/devices/platform/soc/6000000.hdmi/extcon/hdmi/state)"
+
     # Calculate applied brightness based on screen brightness percentage of LED brightness.
     APPLIED_BRIGHTNESS=$(( ${LED_BRIGHTNESS}*${SCREEN_BRIGHTNESS_PERCENT}/100 ))
-    if [ $APPLIED_BRIGHTNESS -lt 50 ]; then
-      # Keep min. brightness of 50
-      APPLIED_BRIGHTNESS=50
-    fi
 
     # If currently plugged to HDMI or brightness calculation crapped out, let's just use the LED brightness at 100%.
     if [ "$HDMI_STATE" = "HDMI=1" ] || [ -z $APPLIED_BRIGHTNESS ]; then
       APPLIED_BRIGHTNESS=${LAST_LED_VALUES[1]}
     fi
+  else
+    APPLIED_BRIGHTNESS=$LED_BRIGHTNESS
+  fi
 
 }
 
