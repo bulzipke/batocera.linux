@@ -17,8 +17,8 @@ KEY_LED_BATTERY_LOW_THRESHOLD="led.battery.low"
 KEY_LED_BATTERY_CHARGING_ENABLED="led.battery.charging"
 
 # Paths to variables
-VAR_LED_PID="/var/run/analog_stick_led_daemon.led.pid"
-VAR_LED_VALUES="/var/run/analog_stick_led_daemon.values"
+VAR_LED_PID="/var/run/knulli-rgb-led-daemon.led.pid"
+VAR_LED_VALUES="/var/run/knulli-rgb-led-daemon.values"
 
 # Last change date of batocera.conf
 LAST_CONF_CHANGE_DATE=$(date -r "/userdata/system/batocera.conf")
@@ -38,9 +38,9 @@ MODE_BATTERY_CHARGING=4
 
 # Define some default RGB LED settings
 DEFAULT_LED_MODE=1
-DEFAULT_BRIGHTNESS=100
+DEFAULT_BRIGHTNESS=70
 DEFAULT_LED_BRIGHTNESS_ADAPTIVE=1
-DEFAULT_SPEED=15
+DEFAULT_SPEED=5
 DEFAULT_COLOUR=(148 255 0)
 DEFAULT_BATTERY_LOW_THRESHOLD=20
 DEFAULT_BATTERY_VERY_LOW_THRESHOLD=5
@@ -116,13 +116,13 @@ initializeLedValues() {
   if [[ ! -n $LED_MODE ]] || [ $LED_MODE -lt 0 ] || [ $LED_MODE -gt 6 ]; then
     batocera-settings-set $KEY_LED_MODE $DEFAULT_LED_MODE
   fi
-  if [[ ! -n $LED_BRIGHTNESS ]] || [ $LED_BRIGHTNESS -lt 0 ] || [ $LED_BRIGHTNESS -gt 255 ]; then
+  if [[ ! -n $LED_BRIGHTNESS ]] || [ $LED_BRIGHTNESS -lt 0 ] || [ $LED_BRIGHTNESS -gt 100 ]; then
     batocera-settings-set $KEY_LED_BRIGHTNESS $DEFAULT_BRIGHTNESS
   fi
   if [[ ! -n $LED_BRIGHTNESS_ADAPTIVE ]] || [ $LED_BRIGHTNESS_ADAPTIVE -lt 0 ] || [ $LED_BRIGHTNESS_ADAPTIVE -gt 1 ]; then
     batocera-settings-set $KEY_LED_BRIGHTNESS_ADAPTIVE $DEFAULT_LED_BRIGHTNESS_ADAPTIVE
   fi
-  if [[ ! -n $LED_SPEED ]] || [ -z $LED_SPEED ] || [ $LED_SPEED -lt 0 ] || [ $LED_SPEED -gt 255 ]; then
+  if [[ ! -n $LED_SPEED ]] || [ -z $LED_SPEED ] || [ $LED_SPEED -lt 0 ] || [ $LED_SPEED -gt 100 ]; then
     batocera-settings-set $KEY_LED_SPEED $DEFAULT_SPEED
   fi
   if [ -z $LED_COLOUR ] || [ "${#LED_COLOUR[@]}" -lt 3 ] || [ -z ${LED_COLOUR[0]} ] || [ ${LED_COLOUR[0]} -lt 0 ] || [ ${LED_COLOUR[0]} -gt 255 ] || [ -z ${LED_COLOUR[1]} ] || [ ${LED_COLOUR[1]} -lt 0 ] || [ ${LED_COLOUR[1]} -gt 255 ] || [ -z ${LED_COLOUR[2]} ] || [ ${LED_COLOUR[2]} -lt 0 ] || [ ${LED_COLOUR[2]} -gt 255 ]; then
@@ -162,8 +162,8 @@ readLedValues() {
     return
   fi
 
-  # Ensure speed is provided for modes 5 and 6 and within the valid range (0-255)
-  if [[ ! -n $LED_SPEED ]] || [ -z $LED_SPEED ] || [ $LED_SPEED -lt 0 ] || [ $LED_SPEED -gt 255 ]; then
+  # Ensure speed is provided for modes 5 and 6 and within the valid range (0-100)
+  if [[ ! -n $LED_SPEED ]] || [ -z $LED_SPEED ] || [ $LED_SPEED -lt 0 ] || [ $LED_SPEED -gt 100 ]; then
     echo "Invalid or missing LED speed ($LED_SPEED) - no LED settings applied."
     return
   fi
@@ -293,21 +293,21 @@ applyLedSettings() {
   # If battery is charging and either last mode was different or a change in brightness has been registered
   if [ $CURRENT_BATTERY_MODE -eq $MODE_BATTERY_CHARGING ] && ([ $LAST_MODE -ne $MODE_BATTERY_CHARGING ] || [ $APPLIED_BRIGHTNESS -ne $LAST_APPLIED_BRIGHTNESS ]); then
     echo "Going to LED mode 'charging'"
-    /usr/bin/analog_stick_led.sh $BATTERY_WARNING_MODE $APPLIED_BRIGHTNESS ${DEFAULT_COLOUR[0]} ${DEFAULT_COLOUR[1]} ${DEFAULT_COLOUR[2]} ${DEFAULT_COLOUR[0]} ${DEFAULT_COLOUR[1]} ${DEFAULT_COLOUR[2]}
+    /usr/bin/knulli-rgb-led $BATTERY_WARNING_MODE $APPLIED_BRIGHTNESS ${DEFAULT_COLOUR[0]} ${DEFAULT_COLOUR[1]} ${DEFAULT_COLOUR[2]} ${DEFAULT_COLOUR[0]} ${DEFAULT_COLOUR[1]} ${DEFAULT_COLOUR[2]}
     LAST_MODE=$MODE_BATTERY_CHARGING
     LAST_APPLIED_BRIGHTNESS=$APPLIED_BRIGHTNESS
 
   # If battery is low and either last mode was different or a change in brightness has been registered
   elif [ $CURRENT_BATTERY_MODE -eq $MODE_BATTERY_WARNING ] && ([ $LAST_MODE -ne $MODE_BATTERY_WARNING ] || [ $APPLIED_BRIGHTNESS -ne $LAST_APPLIED_BRIGHTNESS ]); then
     echo "Going to LED mode 'warning'"
-    /usr/bin/analog_stick_led.sh $BATTERY_WARNING_MODE $APPLIED_BRIGHTNESS ${BATTERY_WARNING_COLOUR[0]} ${BATTERY_WARNING_COLOUR[1]} ${BATTERY_WARNING_COLOUR[2]} ${BATTERY_WARNING_COLOUR[0]} ${BATTERY_WARNING_COLOUR[1]} ${BATTERY_WARNING_COLOUR[2]}
+    /usr/bin/knulli-rgb-led $BATTERY_WARNING_MODE $APPLIED_BRIGHTNESS ${BATTERY_WARNING_COLOUR[0]} ${BATTERY_WARNING_COLOUR[1]} ${BATTERY_WARNING_COLOUR[2]} ${BATTERY_WARNING_COLOUR[0]} ${BATTERY_WARNING_COLOUR[1]} ${BATTERY_WARNING_COLOUR[2]}
     LAST_MODE=$MODE_BATTERY_WARNING
     LAST_APPLIED_BRIGHTNESS=$APPLIED_BRIGHTNESS
  
    # If battery is dangerously low and either last mode was different or a change in brightness has been registered
   elif [ $CURRENT_BATTERY_MODE -eq $MODE_BATTERY_DANGER ] && ([ $LAST_MODE -ne $MODE_BATTERY_DANGER ] || [ $APPLIED_BRIGHTNESS -ne $LAST_APPLIED_BRIGHTNESS ]); then
     echo "Going to LED mode 'danger'"
-    /usr/bin/analog_stick_led.sh $MODE_BATTERY_DANGER $APPLIED_BRIGHTNESS ${BATTERY_DANGER_COLOUR[0]} ${BATTERY_DANGER_COLOUR[1]} ${BATTERY_DANGER_COLOUR[2]} ${BATTERY_DANGER_COLOUR[0]} ${BATTERY_DANGER_COLOUR[1]} ${BATTERY_DANGER_COLOUR[2]}
+    /usr/bin/knulli-rgb-led $MODE_BATTERY_DANGER $APPLIED_BRIGHTNESS ${BATTERY_DANGER_COLOUR[0]} ${BATTERY_DANGER_COLOUR[1]} ${BATTERY_DANGER_COLOUR[2]} ${BATTERY_DANGER_COLOUR[0]} ${BATTERY_DANGER_COLOUR[1]} ${BATTERY_DANGER_COLOUR[2]}
     LAST_MODE=$MODE_BATTERY_DANGER
     LAST_APPLIED_BRIGHTNESS=$APPLIED_BRIGHTNESS
   
@@ -339,16 +339,16 @@ applyLedSettings() {
     # If LED mode was set to 0 (off) and last mode was different
     if [ $LAST_MODE -ne $MODE_OFF ] && [ $LED_MODE -eq 0 ]; then
       echo "Turning off RGB LEDs."
-      /usr/bin/analog_stick_led.sh $LED_MODE
+      /usr/bin/knulli-rgb-led $LED_MODE
       LAST_MODE=$MODE_OFF
     
     # If a change in LED variables was detected or the last mode was different or applied brightness has changed
     elif [ $LED_MODE -gt 0 ] && ($LED_SETTINGS_CHANGE_DETECTED || [ $LAST_MODE -ne $MODE_DEFAULT ] || [ $APPLIED_BRIGHTNESS -ne $LAST_APPLIED_BRIGHTNESS ]); then
       echo "Going to normal LED mode"
       if [ $LED_MODE -lt 5 ]; then
-        /usr/bin/analog_stick_led.sh $LED_MODE $APPLIED_BRIGHTNESS  $LED_RIGHT_R $LED_RIGHT_G $LED_RIGHT_B $LED_LEFT_R $LED_LEFT_G $LED_LEFT_B
+        /usr/bin/knulli-rgb-led $LED_MODE $APPLIED_BRIGHTNESS  $LED_RIGHT_R $LED_RIGHT_G $LED_RIGHT_B $LED_LEFT_R $LED_LEFT_G $LED_LEFT_B
       else
-        /usr/bin/analog_stick_led.sh $LED_MODE $APPLIED_BRIGHTNESS $LED_SPEED
+        /usr/bin/knulli-rgb-led $LED_MODE $APPLIED_BRIGHTNESS $LED_SPEED
       fi
       LAST_MODE=$MODE_DEFAULT
       LED_SETTINGS_CHANGE_DETECTED=false
@@ -426,7 +426,7 @@ start() {
 stop() {
   kill $(cat $VAR_LED_PID)
   rm $VAR_LED_PID
-  /usr/bin/analog_stick_led.sh 0
+  /usr/bin/knulli-rgb-led 0
   echo "Stopped analog stick RGB LED daemon."
 }
 
@@ -452,9 +452,9 @@ runAnimation() {
     # Stop daemon without turning of LEDs
     kill $LED_PID
     updateAppliedBrightness
-    # Play rainbow animation
-    if [ $# -eq 1 ] && [ "$1" == "rainbow" ]; then
-      /usr/bin/analog_stick_led.sh 6 $APPLIED_BRIGHTNESS 50
+    # Play achievement animation
+    if [ $# -eq 1 ] && [ "$1" == "achievement" ]; then
+      /usr/bin/knulli-rgb-led $1 $APPLIED_BRIGHTNESS
       LAST_APPLIED_BRIGHTNESS=$APPLIED_BRIGHTNESS
       sleep 1.5
     fi
@@ -469,7 +469,7 @@ runAnimation() {
 # Prints instructions to stdout.
 printInstructions() {
   echo "Usage: $0 [operation] [arguments]"
-  echo "Daemon for analog stick RGB LED control on Anbernic devices"
+  echo "Daemon for analog stick RGB LED control on supported devices"
   echo "from the RG40XX H/V series."
   echo ""
   echo "Possible operations:"
@@ -480,11 +480,10 @@ printInstructions() {
   echo "             with manually set RGB colors. Example:"
   echo "             $0 set 148 255 0"
   echo "  animation  Runs the given animation. Example:"
-  echo "             $0 animation rainbow"
-  echo "             Supported animations: rainbow"
+  echo "             $0 animation achievement"
+  echo "             Supported animations: achievement"
   echo ""
-  echo "Requires analog_stick_led.sh to be installed."
-  echo "Only works on RG40XX H/V devices."
+  echo "Requires knulli-rgb-led to be installed."
 }
 
 if [ $# -eq 0 ]; then
@@ -499,7 +498,7 @@ elif [ "$1" == "restart" ]; then
 elif [ "$1" == "import" ]; then
   readLedValues
 elif [ "$1" == "animation" ]; then
-  if [ $# -eq 2 ] && [ "$2" == "rainbow" ]; then
+  if [ $# -eq 2 ] && [ "$2" == "achievement" ]; then
     runAnimation $2
   else
     printInstructions

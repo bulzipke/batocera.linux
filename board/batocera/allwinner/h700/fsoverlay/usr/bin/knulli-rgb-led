@@ -9,6 +9,8 @@ fi
 # Define the serial device
 SERIAL_DEVICE="/dev/ttyS5"
 
+DEFAULT_SPEED=0
+
 # Display LED mode descriptions and usage examples if no parameters are provided
 if [ $# -eq 0 ]; then
   echo "Usage: $0 <led_mode> <brightness_value> [<speed_value>|<r_value> <g_value> <b_value> [<joystick_r> <joystick_g> <joystick_b>]]"
@@ -18,24 +20,27 @@ if [ $# -eq 0 ]; then
   echo "   Example: $0 0   # LED off"
   echo "1: Solid Color (no effects)"
   echo "   Usage: $0 1 <brightness_value> <right_joystick_r> <right_joystick_g> <right_joystick_b> <left_joystick_r> <left_joystick_g> <left_joystick_b>"
-  echo "   Example: $0 1 255 255 0 0 0 0 255   # Right joystick color red, left joystick color blue"
+  echo "   Example: $0 1 100 255 0 0 0 0 255   # Right joystick color red, left joystick color blue"
   echo "   Randomize: $0 1 <brightness_value> randomize"
-  echo "   Example: $0 1 255 randomize  # Randomize RGB values and send to /dev/ttyS5 until stopped"
+  echo "   Example: $0 1 100 randomize  # Randomize RGB values and send to /dev/ttyS5 until stopped"
   echo "2: Solid Color (Breathing, Fast)"
   echo "   Usage: $0 2 <brightness_value> <right_joystick_r> <right_joystick_g> <right_joystick_b> <left_joystick_r> <left_joystick_g> <left_joystick_b>"
-  echo "   Example: $0 2 255 0 255 0 0 0 255   # Green color at maximum brightness with fast breathing effect"
+  echo "   Example: $0 2 100 0 255 0 0 0 255   # Green color at maximum brightness with fast breathing effect"
   echo "3: Solid Color (Breathing, Medium)"
   echo "   Usage: $0 3 <brightness_value> <right_joystick_r> <right_joystick_g> <right_joystick_b> <left_joystick_r> <left_joystick_g> <left_joystick_b>"
-  echo "   Example: $0 3 255 0 0 255 0 0 255   # Blue color at maximum brightness with medium breathing effect"
+  echo "   Example: $0 3 100 0 0 255 0 0 255   # Blue color at maximum brightness with medium breathing effect"
   echo "4: Solid Color (Breathing, Slow)"
   echo "   Usage: $0 4 <brightness_value> <right_joystick_r> <right_joystick_g> <right_joystick_b> <left_joystick_r> <left_joystick_g> <left_joystick_b>"
-  echo "   Example: $0 4 255 255 255 0 255 255 0   # Yellow color at maximum brightness with slow breathing effect"
+  echo "   Example: $0 4 100 255 255 0 255 255 0   # Yellow color at maximum brightness with slow breathing effect"
   echo "5: Monochromatic Rainbow (Cycle between RGB colors)"
   echo "   Usage: $0 5 <brightness_value> <speed_value>"
-  echo "   Example: $0 5 255 100   # Monochromatic rainbow effect at maximum brightness with speed 100"
+  echo "   Example: $0 5 100 100   # Monochromatic rainbow effect at maximum brightness with speed 100"
   echo "6: Multicolor Rainbow (Rainbow Swirl effect)"
   echo "   Usage: $0 6 <brightness_value> <speed_value>"
-  echo "   Example: $0 6 255 100   # Multicolor rainbow swirl effect at maximum brightness with speed 100"
+  echo "   Example: $0 6 100 100   # Multicolor rainbow swirl effect at maximum brightness with speed 100"
+  echo "achievement: Play achievement animation"
+  echo "   Usage: $0 achievement <brightness_value>"
+  echo "   Example: $0 achievement 100  # LED off"
   exit 0
 fi
 
@@ -64,14 +69,26 @@ echo $LED_MODE
 # Ensure brightness is within the valid range (0-255)
 if [ -z $BRIGHTNESS ]; then
   BRIGHTNESS=0
-elif [ $BRIGHTNESS -lt 0 ] || [ $BRIGHTNESS -gt 255 ]; then
-  echo "Brightness value must be between 0 and 255"
+elif [ $BRIGHTNESS -lt 0 ] || [ $BRIGHTNESS -gt 100 ]; then
+  echo "Brightness value must be between 0 and 100"
   exit 1
 fi
+
+# The H700 brightness has an integer range of 0-255
+# So we need to do some math first:
+# Divide by 100 and mulitply by 255
+BRIGHTNESS_FLOAT=$(echo "scale=2; $BRIGHTNESS/100*255" | bc)
+
+# Round it to get applicable brightness
+BRIGHTNESS="$(printf '%.0f' ${BRIGHTNESS_FLOAT})"
+echo "Calculated brightness: $BRIGHTNESS"
 
 # Ensure LED mode is within the valid range (1-6)
 if [ -z $LED_MODE ]; then
   LED_MODE=0
+elif [ "$LED_MODE" == 'achievement' ]; then
+  LED_MODE=6
+  DEFAULT_SPEED=5
 elif [ $LED_MODE -lt 0 ] || [ $LED_MODE -gt 6 ]; then
   echo "LED mode must be between 0 (off) and 6"
   exit 1
@@ -121,21 +138,25 @@ if [ $LED_MODE -eq 0 ]; then
   PAYLOAD+=$(printf '\\x%02X' $CHECKSUM)
 
 elif [ $LED_MODE -ge 5 ] && [ $LED_MODE -le 6 ]; then
-  # Ensure speed is provided for modes 5 and 6
-  if [ $# -ne 3 ]; then
-    echo "Usage for modes 5 and 6: $0 <led_mode> <brightness_value> <speed_value>"
-    exit 1
-  fi
 
   SPEED=$3
 
-  # Ensure speed is within the valid range (0-255)
+  # Ensure speed is within the valid range (0-100)
   if [ -z $SPEED ]; then
-    SPEED=0
-  elif [ $SPEED -lt 0 ] || [ $SPEED -gt 255 ]; then
-    echo "Speed value must be between 0 and 255"
+    SPEED=$DEFAULT_SPEED
+  elif [ $SPEED -lt 0 ] || [ $SPEED -gt 100 ]; then
+    echo "Speed value must be between 0 and 100"
     exit 1
   fi
+
+  # The H700 speed has an integer range of 0-255
+  # So we need to do some math first:
+  # Divide by 100 and mulitply by 255
+  SPEED_FLOAT=$(echo "scale=2; $SPEED/100*255" | bc)
+  
+  # Round it to get applicable brightness
+  SPEED="$(printf '%.0f' ${SPEED_FLOAT})"
+  echo "Calculated speed: $SPEED"
 
   # Calculate the checksum
   CHECKSUM=$(calculate_checksum $LED_MODE $BRIGHTNESS 1 1 $SPEED)

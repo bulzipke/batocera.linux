@@ -2,7 +2,7 @@
 
 BOARD=$(cat /boot/boot/batocera.board)
 # We only want the script to run for these devices
-if [ "$BOARD" != "rg40xx-h" ] && [ "$BOARD" != "rg40xx-v" ] && [ "$BOARD" != "rg-cubexx" ]; then
+if [ "$BOARD" != "rg40xx-h" ] && [ "$BOARD" != "rg40xx-v" ] && [ "$BOARD" != "rg-cubexx" ] && [ "$BOARD" != "trimui-smart-pro" ] && [ "$BOARD" != "trimui-brick" ]; then
     exit 1
 fi
 
@@ -20,5 +20,5 @@ fi
 
 # Let the LED daemon run the rainbow animation if retroachievement effect is turned on
 if [ $LED_RETRO_ACHIEVEMENTS -eq $EFFECT_ON ]; then
-  /usr/bin/analog_stick_led_daemon.sh animation rainbow
+  /usr/bin/knulli-rgb-led-daemon animation achievement
 fi

@@ -9,8 +9,8 @@ fi
 
 case "$1" in
     thaw|resume)
-        if echo "$SERVICES" | grep -q "analog_stick_led"; then
-            /usr/bin/analog_stick_led_daemon.sh restart
+        if echo "$SERVICES" | grep -q "rgb-led"; then
+            /usr/bin/knulli-rgb-led-daemon restart
         fi
         ;;
 esac
