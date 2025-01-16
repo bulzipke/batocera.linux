@@ -17,7 +17,7 @@ ifdef PARALLEL_BUILD
 	MAKE_OPTS  += -j$(MAKE_JLEVEL)
 endif
 
-TARGETS := $(sort $(shell find $(PROJECT_DIR)/configs/ -name 'b*.board' | sed -n 's/.*\/batocera-\(.*\).board/\1/p'))
+TARGETS := $(sort $(shell find $(PROJECT_DIR)/configs/ -name 'k*.board' | sed -n 's/.*\/knulli-\(.*\).board/\1/p'))
 UID  := $(shell id -u)
 GID  := $(shell id -g)
 OS := $(shell uname)
@@ -126,11 +126,11 @@ dl-dir:
 	@$(MAKE_BUILDROOT) clean
 
 %-config: batocera-docker-image output-dir-%
-	@$(PROJECT_DIR)/configs/createDefconfig.sh $(PROJECT_DIR)/configs/batocera-$*
+	@$(PROJECT_DIR)/configs/createDefconfig.sh $(PROJECT_DIR)/configs/knulli-$*
 	@for opt in $(EXTRA_OPTS); do \
-		echo $$opt >> $(PROJECT_DIR)/configs/batocera-$*_defconfig ; \
+		echo $$opt >> $(PROJECT_DIR)/configs/knulli-$*_defconfig ; \
 	done
-	@$(MAKE_BUILDROOT) batocera-$*_defconfig
+	@$(MAKE_BUILDROOT) knulli-$*_defconfig
 
 %-build: batocera-docker-image %-config ccache-dir dl-dir
 	@$(MAKE_BUILDROOT) $(CMD)

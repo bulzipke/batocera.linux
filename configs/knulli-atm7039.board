@@ -1,4 +1,4 @@
-include batocera-board.common
+include knulli-board.common
 
 # usern
 BR2_ROOTFS_USERS_TABLES="$(BR2_EXTERNAL_BATOCERA_PATH)/board/batocera/users.txt"

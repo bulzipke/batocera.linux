@@ -1,4 +1,4 @@
-include batocera-board.common
+include knulli-board.common
 
 # Target definition
 BR2_aarch64=y
