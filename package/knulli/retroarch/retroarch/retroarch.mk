@@ -204,7 +204,7 @@ endef
 
 define RETROARCH_EVMAPY
 	mkdir -p $(TARGET_DIR)/usr/share/evmapy
-	cp -f $(BR2_EXTERNAL_BATOCERA_PATH)/package/batocera/emulators/retroarch/retroarch/libretro.keys \
+	cp -f $(BR2_EXTERNAL_BATOCERA_PATH)/package/knulli/retroarch/retroarch/libretro.keys \
 	    $(TARGET_DIR)/usr/share/evmapy
 endef
 

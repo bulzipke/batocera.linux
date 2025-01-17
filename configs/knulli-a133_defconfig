@@ -1,4 +1,4 @@
-# from file batocera-board.common
+# from file knulli-board.common
 # users
 BR2_ROOTFS_USERS_TABLES="$(BR2_EXTERNAL_BATOCERA_PATH)/board/batocera/users.txt"
 
@@ -128,7 +128,7 @@ BR2_ROOTFS_OVERLAY="$(BR2_EXTERNAL_BATOCERA_PATH)/board/batocera/fsoverlay $(BR2
 BR2_TARGET_ROOTFS_SQUASHFS4_GZIP=y
 
 # batocera splash screen
-BR2_PACKAGE_BATOCERA_SPLASH_MPV=y
+#BR2_PACKAGE_BATOCERA_SPLASH_MPV=y
 
 BR2_PACKAGE_MPV=y
 
