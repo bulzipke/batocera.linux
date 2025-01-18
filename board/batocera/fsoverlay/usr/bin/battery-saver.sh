@@ -31,7 +31,7 @@ cleanup() {
     fi
 
     # Restore audio and state if exit while inactive but not duriung shutdown process
-    if [ ! -f /var/run/shutdown-normal.flag ] && [ ! -f /var/run/shutdown-ingame.flag ]; then
+    if [ ! -f /var/run/shutdown.flag ]; then
         batocera-audio setSystemVolume unmute
         echo "1" > "$STATE_FLAG"
     fi
