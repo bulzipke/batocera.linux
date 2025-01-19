@@ -430,7 +430,6 @@ dreamcast:
       flycast:      { requireAnyOf: [BR2_PACKAGE_LIBRETRO_FLYCAST] }
       flycastvl:    { requireAnyOf: [BR2_PACKAGE_LIBRETRO_FLYCASTVL] }
       flycast-xtreme: { requireAnyOf: [BR2_PACKAGE_LIBRETRO_FLYCAST_XTREME] }
-      morpheuscast: { requireAnyOf: [BR2_PACKAGE_LIBRETRO_MORPHEUSCAST] }
     flycast:
       flycast:        { requireAnyOf: [BR2_PACKAGE_FLYCAST]          }
     redream:
@@ -454,7 +453,6 @@ naomi:
       flycast:      { requireAnyOf: [BR2_PACKAGE_LIBRETRO_FLYCAST]  }
       flycastvl:    { requireAnyOf: [BR2_PACKAGE_LIBRETRO_FLYCASTVL] }
       flycast-xtreme:    { requireAnyOf: [BR2_PACKAGE_LIBRETRO_FLYCAST_XTREME] }
-      morpheuscast: { requireAnyOf: [BR2_PACKAGE_LIBRETRO_MORPHEUSCAST] }
     flycast:
       flycast:  { requireAnyOf: [BR2_PACKAGE_FLYCAST]           }
 
@@ -470,7 +468,6 @@ atomiswave:
       flycast:      { requireAnyOf: [BR2_PACKAGE_LIBRETRO_FLYCAST] }
       flycastvl:    { requireAnyOf: [BR2_PACKAGE_LIBRETRO_FLYCASTVL] }
       flycast-xtreme:    { requireAnyOf: [BR2_PACKAGE_LIBRETRO_FLYCAST_XTREME] }
-      morpheuscast: { requireAnyOf: [BR2_PACKAGE_LIBRETRO_MORPHEUSCAST] }
     flycast:
       flycast: { requireAnyOf: [BR2_PACKAGE_FLYCAST]          }
 
@@ -485,7 +482,6 @@ systemsp:
     libretro:
       flycast:  { requireAnyOf: [BR2_PACKAGE_LIBRETRO_FLYCAST]  }
       flycast-xtreme:    { requireAnyOf: [BR2_PACKAGE_LIBRETRO_FLYCAST_XTREME] }
-      morpheuscast: { requireAnyOf: [BR2_PACKAGE_LIBRETRO_MORPHEUSCAST] }
     flycast:
       flycast:  { requireAnyOf: [BR2_PACKAGE_FLYCAST]           }
 
@@ -2416,7 +2412,6 @@ mpv:
     - mxf
     - roq
     - nsv
-  manufacturer: Misc. System
   path: mpv
   command: emulatorlauncher %CONTROLLERSCONFIG% -system %SYSTEM% -rom %ROM% -gameinfoxml %GAMEINFOXML% -systemname %SYSTEMNAME% -emulator mpv
   emulators:
@@ -3976,7 +3971,6 @@ naomi2:
     libretro:
       flycast: { requireAnyOf: [BR2_PACKAGE_LIBRETRO_FLYCAST] }
       flycast-xtreme:    { requireAnyOf: [BR2_PACKAGE_LIBRETRO_FLYCAST_XTREME] }
-      morpheuscast: { requireAnyOf: [BR2_PACKAGE_LIBRETRO_MORPHEUSCAST] }
     flycast:
       flycast: { requireAnyOf: [BR2_PACKAGE_FLYCAST]          }
   comment_en: |
@@ -4964,15 +4958,15 @@ doom3:
             │   ├── pak007.pk4
             │   └── pak008.pk4
             └── d3xp/
-                ├── pak000.pk4 
+                ├── pak000.pk4
                 └── pak001.pk4
-    
-    Create a `Doom 3.d3` file in the roms/doom3 directory. 
+
+    Create a `Doom 3.d3` file in the roms/doom3 directory.
     If you have the Resurrection of Evil mod then Create a `Doom 3 - Resurrection of Evil.d3` file too.
 
     The `Doom 3.d3` file should contain the path to the base game. - i.e. base/pak000.pk4
     Similarly `Doom 3 - Resurrection of Evil.d3` should be - d3xp/pak000.pk4
-    
+
     For more info: https://wiki.batocera.org/systems:doom3
   comment_fr: |
     Trouvez la documentation ici: https://wiki.batocera.org/systems:doom3
@@ -5604,7 +5598,7 @@ ps4:
     Before you can play a game you must install the game via the associated .PKG file of your backed-up game using the F1 menu.
     Then in the new installation directory for the installed game, create a file with a .ps4 extension so EmularionStation will see it.
     i.e. /userdata/roms/ps4/CUSA03173/Bloodborne.ps4
-    
+
     Then you can launch the game from EmulationStation accordingly.
 
     DLC content will be stored in: /userdata/roms/ps4/DLC
