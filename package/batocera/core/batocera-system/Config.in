@@ -105,6 +105,13 @@ if BR2_PACKAGE_BATOCERA_TARGET_X86_ANY		|| \
 	default y
 endif
 
+
+if BR2_PACKAGE_BATOCERA_TARGET_SUNXI_R16
+        config BR2_KERNEL_LEGACY_3_10
+        bool "Allwinner/Sunxi R16 requires legacy kernel 3.4"
+        default y
+endif
+
 config BR2_PACKAGE_BATOCERA_CORES_STILL_COMMERCIALIZED
 	bool "batocera is limited to abandoned systems"
 
@@ -210,7 +217,7 @@ config BR2_PACKAGE_BATOCERA_SYSTEM
 	select BR2_PACKAGE_WIRELESS_TOOLS_LIB		# wireless tools
 	select BR2_PACKAGE_DROPBEAR			# ssh server
 	select BR2_PACKAGE_PM_UTILS			# suspend
-	select BR2_PACKAGE_QTSIXA_SHANWAN		# ps3 pad
+	select BR2_PACKAGE_QTSIXA_SHANWAN		if ! BR2_PACKAGE_BATOCERA_TARGET_SUNXI_R16 # ps3 pad
 	select BR2_PACKAGE_EVSIEVE			# linux tool to manipulate events (like joining them) ; armv8 in 32 bits seems not supported
 	select BR2_PACKAGE_UTIL_LINUX_LIBMOUNT		# for util-linux compilation to work (so, may be removed in the future)
 	select BR2_PACKAGE_FBDUMP			# tool to capture snapshots from the Linux kernel framebuffer device and write them out as a PPM file
@@ -254,7 +261,7 @@ config BR2_PACKAGE_BATOCERA_SYSTEM
 	select BR2_PACKAGE_BATOCERA_RESOLUTION			# batocera resolution
 	select BR2_PACKAGE_BATOCERA_SETTINGS			# batocera-settings-get/set
 	select BR2_PACKAGE_BATOCERA_AUDIO			if !BR2_PACKAGE_BATOCERA_AUDIO_ALSA # batocera audio-pipewire
-	select BR2_PACKAGE_BATOCERA_AUDIO_ALSA			if BR2_PACKAGE_BATOCERA_TARGET_BCM2835 || BR2_PACKAGE_BATOCERA_TARGET_SUNXI_R16 || BR2_PACKAGE_BATOCERA_TARGET_ATM7039 # batocera audio-alsa
+	select BR2_PACKAGE_BATOCERA_AUDIO_ALSA			if BR2_PACKAGE_BATOCERA_TARGET_BCM2835 || BR2_PACKAGE_BATOCERA_TARGET_SUNXI_R16 || BR2_PACKAGE_BATOCERA_TARGET_ATM7039 || BR2_PACKAGE_BATOCERA_TARGET_SUNXI_R16# batocera audio-alsa
 	select BR2_PACKAGE_BATOCERA_BLUETOOTH			if !BR2_PACKAGE_BATOCERA_TARGET_SUNXI_R16 && !BR2_PACKAGE_BATOCERA_TARGET_ATM7039 # batocera bluetooth
 	select BR2_PACKAGE_BATOCERA_NOTICE			# boot pdf notice
 	select BR2_PACKAGE_BATOCERA_TEST			# batocera test script
@@ -859,17 +866,6 @@ config BR2_PACKAGE_BATOCERA_SEGADC
 						   BR2_PACKAGE_BATOCERA_TARGET_H5	|| \
 						   BR2_PACKAGE_BATOCERA_TARGET_H6
 
-        select BR2_PACKAGE_LIBRETRO_MORPHEUSCAST   if BR2_PACKAGE_BATOCERA_TARGET_BCM2836  || \
-                                                   BR2_PACKAGE_BATOCERA_TARGET_BCM2837  || \
-                                                   BR2_PACKAGE_BATOCERA_TARGET_BCM2711  || \
-                                                   BR2_PACKAGE_BATOCERA_TARGET_BCM2712  || \
-                                                   BR2_PACKAGE_BATOCERA_TARGET_RK3326   || \
-                                                   BR2_PACKAGE_BATOCERA_TARGET_A133     || \
-                                                   BR2_PACKAGE_BATOCERA_TARGET_H700     || \
-                                                   BR2_PACKAGE_BATOCERA_TARGET_H3       || \
-                                                   BR2_PACKAGE_BATOCERA_TARGET_H5       || \
-                                                   BR2_PACKAGE_BATOCERA_TARGET_H6
-
         select BR2_PACKAGE_LIBRETRO_FLYCAST_XTREME if BR2_PACKAGE_BATOCERA_TARGET_BCM2836  || \
                                                    BR2_PACKAGE_BATOCERA_TARGET_BCM2837  || \
                                                    BR2_PACKAGE_BATOCERA_TARGET_BCM2711  || \
@@ -1172,7 +1168,7 @@ config BR2_PACKAGE_BATOCERA_PORTS_SYSTEMS
 	select BR2_PACKAGE_OPENJAZZ		# ALL
 
 	# Jazz Jackrabbit 2
-	select BR2_PACKAGE_JAZZ2_NATIVE    if !BR2_PACKAGE_BATOCERA_TARGET_RISCV && !BR2_PACKAGE_BATOCERA_TARGET_H700 && !BR2_PACKAGE_BATOCERA_TARGET_A133
+	select BR2_PACKAGE_JAZZ2_NATIVE    if !BR2_PACKAGE_BATOCERA_TARGET_RISCV && !BR2_PACKAGE_BATOCERA_TARGET_H700 && !BR2_PACKAGE_BATOCERA_TARGET_A133 && !BR2_PACKAGE_BATOCERA_TARGET_SUNXI_R16
 
 	help
 	  Ports
