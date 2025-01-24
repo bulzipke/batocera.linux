@@ -3,9 +3,9 @@
 # LIBRETRO-FLYCAST_XTREME
 #
 ################################################################################
-# version.: Commits on Dec 8, 2021
-LIBRETRO_FLYCAST_XTREME_VERSION = fd9196b40b2198dfa3bed3a16dda60822f24ee66
-LIBRETRO_FLYCAST_XTREME_SITE = $(call github,KMFDManic,flycast,$(LIBRETRO_FLYCAST_XTREME_VERSION))
+# version.: Commits on Jan 17, 2025
+LIBRETRO_FLYCAST_XTREME_VERSION = 603814c9f73b773c455d9a497f389d2f93a257fd
+LIBRETRO_FLYCAST_XTREME_SITE = $(call github,metallic77,flycast,$(LIBRETRO_FLYCAST_XTREME_VERSION))
 LIBRETRO_FLYCAST_XTREME_LICENSE = GPLv2
 
 LIBRETRO_FLYCAST_XTREME_PLATFORM = $(LIBRETRO_PLATFORM)
@@ -51,7 +51,7 @@ define LIBRETRO_FLYCAST_XTREME_BUILD_CMDS
 endef
 
 define LIBRETRO_FLYCAST_XTREME_INSTALL_TARGET_CMDS
-	$(INSTALL) -D $(@D)/km_flycast_xtreme_libretro.so \
+	$(INSTALL) -D $(@D)/flycast_libretro.so \
 		$(TARGET_DIR)/usr/lib/libretro/flycast-xtreme_libretro.so
 
     cp "$(BR2_EXTERNAL_BATOCERA_PATH)/package/batocera/emulators/retroarch/libretro/libretro-flycast-xtreme/flycast-xtreme_libretro.info" \
