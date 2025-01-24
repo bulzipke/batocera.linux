@@ -1238,6 +1238,9 @@ def writeBezelConfig(generator: Generator, bezel: str | None, shaderBezel: bool,
     retroarchConfig['input_overlay_enable'] = "false"
     retroarchConfig['video_message_pos_x']  = 0.05
     retroarchConfig['video_message_pos_y']  = 0.05
+    # Set default video viewport bias in case no bezel can be applied
+    retroarchConfig['video_viewport_bias_x']  = 0.500000
+    retroarchConfig['video_viewport_bias_y']  = 0.500000
 
     # special text...
     if bezel == "none" or bezel == "":
@@ -1352,6 +1355,10 @@ def writeBezelConfig(generator: Generator, bezel: str | None, shaderBezel: bool,
         infos["messagey"] = 0.0
 
     retroarchConfig['input_overlay_opacity'] = infos["opacity"]
+    
+    # Set video viewport bias for viewport positioning
+    retroarchConfig['video_viewport_bias_x']  = 0.000000
+    retroarchConfig['video_viewport_bias_y']  = 1.000000
 
     # stretch option
     if system.isOptSet('bezel_stretch') and system.getOptBoolean('bezel_stretch') == True:
