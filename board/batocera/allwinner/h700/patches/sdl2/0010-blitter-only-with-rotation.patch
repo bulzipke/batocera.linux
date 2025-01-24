@@ -1,6 +1,16 @@
---- a/src/video/mali-fbdev/SDL_malivideo.c	2024-10-25 22:43:27.517462027 -0400
-+++ b/src/video/mali-fbdev/SDL_malivideo.c	2024-10-25 22:44:34.666361361 -0400
-@@ -163,10 +163,14 @@
+--- a/src/video/mali-fbdev/SDL_malivideo.c	2024-12-29 15:31:27.758096563 +0000
++++ b/src/video/mali-fbdev/SDL_malivideo.c	2024-12-29 15:43:16.241044663 +0000
+@@ -120,7 +120,8 @@
+ int
+ MALI_VideoInit(_THIS)
+ {
+-    const char *blitter_status = NULL, *rotation = NULL;
++    SDL_bool blitter_disabled = SDL_TRUE;
++    const char *blitter_hint_disabled, *rotation = NULL;
+     SDL_VideoDisplay display;
+     SDL_DisplayMode current_mode;
+     SDL_DisplayData *data;
+@@ -163,11 +164,17 @@
      data->rotation = (vinfo.xres < vinfo.yres) ? 1 : 0;
  
      rotation = SDL_GetHint("SDL_ROTATION");
@@ -9,11 +19,14 @@
      if (rotation != NULL)
          data->rotation = SDL_atoi(rotation);
  
+-    if (!blitter_status || blitter_status[0] != '1') {
 +    if (data->rotation != 0) {
-+	blitter_status = SDL_GetHint("SDL_BLITTER_DISABLED");
++	blitter_hint_disabled = SDL_GetHint("SDL_BLITTER_DISABLED");
++        if (blitter_hint_disabled && blitter_hint_disabled[0] == '0')
++            blitter_disabled = SDL_FALSE;
 +    }
 +
-     if (!blitter_status || blitter_status[0] != '1') {
++    if (!blitter_disabled) {
          data->blitter = SDL_calloc(1, sizeof(MALI_Blitter));
          data->blitter->_this = _this;
-
+         MALI_BlitterInit(_this, data->blitter);
