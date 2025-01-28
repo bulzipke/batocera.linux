@@ -45,13 +45,13 @@ RUN dpkg --add-architecture i386 && \
 # Set locale
 RUN sed -i -e 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen && \
 	locale-gen
-ENV LANG en_US.UTF-8
-ENV LANGUAGE en_US:en
-ENV LC_ALL en_US.UTF-8
-ENV TZ Europe/Paris
+ENV LANG=en_US.UTF-8
+ENV LANGUAGE=en_US:en
+ENV LC_ALL=en_US.UTF-8
+ENV TZ=Europe/Paris
 
 # Workaround host-tar configure error
-ENV FORCE_UNSAFE_CONFIGURE 1
+ENV FORCE_UNSAFE_CONFIGURE=1
 
 # device-tree-compiler : required for device-trees-aml-s9xx
 # libc6:i386 libncurses5:i386 libstdc++6:i386: required for mame2016
