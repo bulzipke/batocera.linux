@@ -668,4 +668,5 @@ menu "Knulli Packages"
   source "$BR2_EXTERNAL_BATOCERA_PATH/package/knulli/themes/es-theme-art-book-next/Config.in"
   source "$BR2_EXTERNAL_BATOCERA_PATH/package/knulli/themes/es-theme-knulli/Config.in"
   source "$BR2_EXTERNAL_BATOCERA_PATH/package/knulli/music/es-background-musics/Config.in"
+  source "$BR2_EXTERNAL_BATOCERA_PATH/package/knulli/controllers/rocknix-joypad/Config.in"
 endmenu
