@@ -867,11 +867,16 @@ def createLibretroConfig(generator: Generator, system: Emulator, controllers: Co
     else:
         retroarchConfig['video_scale_integer'] = 'false'
 
-    if system.isOptSet('integeroverscale') and system.getOptBoolean('integeroverscale') == True:
-        retroarchConfig['video_scale_integer_overscale'] = 'true'
+    if system.isOptSet('integeroverscale'):
+        retroarchConfig['video_scale_integer_scaling'] = systemConfig.get('integeroverscale', "")
     else:
-        retroarchConfig['video_scale_integer_overscale'] = 'false'
-        
+        retroarchConfig['video_scale_integer_scaling'] = '0'
+
+    if system.isOptSet('integerscaleaxis'):
+        retroarchConfig['video_scale_integer_axis'] = systemConfig.get('integerscaleaxis', "")
+    else:
+        retroarchConfig['video_scale_integer_axis'] = '0'
+
     # Netplay management
     if 'netplay.mode' in system.config and system.config['netplay.mode'] in systemNetplayModes:
         # Security : hardcore mode disables save states, which would kill netplay
