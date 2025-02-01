@@ -65,7 +65,7 @@ then
 
         NEWVAL=$(expr "${X}" "-" "${DELTA}")
 
-        if [ "${NEWVAL}" -le 0 ] && [ "${X}" -ne "${XMIN}" ] && [ "${X}" -ne 0 ]; then
+        if [ "${NEWVAL}" -lt "${XMIN}" ] && [ "${X}" -ne "${XMIN}" ] && [ "${X}" -ne 0 ]; then
             NEWVAL=${XMIN}
         fi
     fi
