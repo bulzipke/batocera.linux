@@ -22,7 +22,7 @@ class MpvGenerator(Generator):
     def generate(self, system, rom, playersControllers, metadata, guns, wheels, gameResolution):
         rom_path = Path(rom)
 
-        commandArray = [system.config["emulator"], rom_path, "--fs"]
+        commandArray = [system.config["emulator"], rom_path, "--fs", "--input-commands=load-input-conf /etc/mpv/input.conf; load-input-conf ~/.config/mpv/input.conf"]
         return Command.Command(array=commandArray)
 
     def getMouseMode(self, config, rom):
