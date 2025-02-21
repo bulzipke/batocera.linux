@@ -4,7 +4,7 @@
 #
 ################################################################################
 # Version: Commits on February 22, 2025
-ES_THEME_KNULLI_VERSION = a01a2a1c76577ca4f19211c95d971639a6ac4861
+ES_THEME_KNULLI_VERSION = 48e47a0c4c5ac1f8e7437378dad42de298332929
 ES_THEME_KNULLI_SITE = $(call github,symbuzzer,es-theme-knulli,$(ES_THEME_KNULLI_VERSION))
 
 define ES_THEME_KNULLI_INSTALL_TARGET_CMDS
