@@ -3,8 +3,8 @@
 # EmulationStation theme "Knulli"
 #
 ################################################################################
-# Version: Commits on February 22, 2025
-ES_THEME_KNULLI_VERSION = d3802872512ebaf9e5cd17fa0ce1ed6bee41a508
+# Version: Commits on February 23, 2025
+ES_THEME_KNULLI_VERSION = f2fce9ecbecb03b8c52fb581a35cad624a6f5827
 ES_THEME_KNULLI_SITE = $(call github,symbuzzer,es-theme-knulli,$(ES_THEME_KNULLI_VERSION))
 
 define ES_THEME_KNULLI_INSTALL_TARGET_CMDS
