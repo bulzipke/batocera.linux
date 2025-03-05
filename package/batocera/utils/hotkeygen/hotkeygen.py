@@ -285,8 +285,11 @@ def do_new_context(context_name: str | None = None, context_json: str | None = N
             GCONTEXT_FILE.unlink()
 
     # inform the process
-    pid = int(read_pid())
-    os.kill(pid, signal.SIGHUP)
+    try:
+        pid = int(read_pid())
+        os.kill(pid, signal.SIGHUP)
+    except (ValueError, FileNotFoundError, IOError):
+        pass # No PID file or it could not be read or parsed, no signal needed
 
 
 def do_list() -> None:
