@@ -2,7 +2,7 @@
 
 BOARD=$(cat /boot/boot/batocera.board)
 # We only want the script to run for these devices
-if [ "$BOARD" != "trimui-brick" ]; then
+if [ "$BOARD" != "trimui-brick" ] && [ "$BOARD" = "trimui-smart-pro" ]; then
     exit 1
 fi
 
