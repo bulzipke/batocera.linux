@@ -14,35 +14,48 @@ if [ ! -f "$STANDALONE_SCUMMVM_INI" ]; then
   touch "$STANDALONE_SCUMMVM_INI"
 fi
 
-if [ ! -d "$1" ]; then
-    echo "$1 does not exist. Aborting."
-    exit 1
-elif [ -z "$(ls -A "$1")" ]; then
-    echo "Directory $1 is empty. Nothing to do here."
-    exit 1
-elif ls $1/*.scummvm 1> /dev/null 2>&1; then
-    echo "Directory $1 already has a scummvm file. Nothing to do here."
+if [ -z "$1" ]; then
+    echo "Usage: $0 /path/to/scummvm/game/folder"
     exit 1
 fi
 
-echo "$1 has no ScummVM file, yet - attempting game detection."
+# Remove trailing "/" if necessary
+GAME_FOLDER=$1
+GAME_FOLDER="${GAME_FOLDER%/}"
 
+if [ ! -d "$GAME_FOLDER" ]; then
+    echo "$GAME_FOLDER does not exist. Aborting."
+    exit 1
+elif [ -z "$(ls -A "$GAME_FOLDER")" ]; then
+    echo "Directory $GAME_FOLDER is empty. Nothing to do here."
+    exit 1
+elif ls $GAME_FOLDER/*.scummvm 1> /dev/null 2>&1; then
+    echo "Directory $GAME_FOLDER already has a scummvm file. Nothing to do here."
+    exit 1
+fi
 
-# Add game to libretro ScummVM config and memorize the game target name
-GAME_TARGET="$(scummvm -c "$LIBRETRO_SCUMMVM_INI" -p "$1" --add | sed -En "s/[ ]*Target:[ ]*(.*)/\1/p")"
+echo "$GAME_FOLDER has no ScummVM file, yet - attempting game detection."
 
-if [ -z "$GAME_TARGET" ]; then
-  echo "No new ScummVM game found in $1 - aborting."
+# Add game to libretro ScummVM config and memorize the game handle and name
+ADDING_GAME_LOG="$(scummvm -c "$LIBRETRO_SCUMMVM_INI" -p "$GAME_FOLDER" --add)"
+GAME_HANDLE="$(sed -En "s/[ ]*Target:[ ]*(.*)/\1/p" <<< $ADDING_GAME_LOG)"
+
+if [ -z "$GAME_HANDLE" ]; then
+  echo "No new ScummVM game found in $GAME_FOLDER - aborting."
   exit 1
 fi
 
-echo "Detected $GAME_TARGET in $1"
+# Sanitize name to be used as scummvm file name
+GAME_NAME="$(sed -En "s/[ ]*Name:[ ]*(.*)/\1/p" <<< $ADDING_GAME_LOG)"
+SANITIZED_GAME_NAME="$(sed -e "s/[^()A-Za-z0-9 ._-]/ /g" <<< $GAME_NAME)"
+
+echo "Detected $GAME_NAME in $GAME_FOLDER and added the game as $GAME_HANDLE"
 
 # Add the game also to the Standalone ScummVM configuration (and hide output)
-scummvm -c "$STANDALONE_SCUMMVM_INI" -p "$1" --add > /dev/null 2>&1;
+scummvm -c "$STANDALONE_SCUMMVM_INI" -p "$GAME_FOLDER" --add > /dev/null 2>&1;
 
 # Create *.scummvm file for EmulationStation
-echo "$GAME_TARGET" > "$1/$GAME_TARGET.scummvm"
-echo "Created $1/$GAME_TARGET.scummvm"
+echo "$GAME_HANDLE" > "$GAME_FOLDER/$SANITIZED_GAME_NAME.scummvm"
+echo "Created $GAME_FOLDER/$SANITIZED_GAME_NAME.scummvm"
 
 exit 0
