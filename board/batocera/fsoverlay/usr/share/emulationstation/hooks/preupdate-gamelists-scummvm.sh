@@ -2,6 +2,9 @@
 
 # ScummVM ROM location
 SCUMMVM_FOLDER="/userdata/roms/scummvm"
+SCUMMVM_IMAGES_FOLDER="/userdata/roms/scummvm/images"
+SCUMMVM_VIDEOS_FOLDER="/userdata/roms/scummvm/videos"
+SCUMMVM_MANUALS_FOLDER="/userdata/roms/scummvm/manuals"
 
 if [ ! -d "$SCUMMVM_FOLDER" ]; then
     echo "$SCUMMVM_FOLDER does not exist. Aborting."
@@ -16,8 +19,10 @@ for dir in $SCUMMVM_FOLDER/*/
 do
   # Remove the trailing "/"
   dir=${dir%*/}
-  # Try to identify a game in the given folder
-  knulli-detect-scummvm-game $dir
+  if [ "$dir" != "$SCUMMVM_IMAGES_FOLDER" ] && [ "$dir" != "$SCUMMVM_VIDEOS_FOLDER" ] && [ "$dir" != "$SCUMMVM_MANUALS_FOLDER" ]; then
+    # Try to identify a game in the given folder
+    knulli-detect-scummvm-game $dir
+  fi
 done
 
 exit 0
