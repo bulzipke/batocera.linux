@@ -9,11 +9,9 @@ fi
 case "$1" in
   start)
   # Code in here will only be executed on start.
-    echo -n "Enabling analog stick LEDs"
     /usr/bin/knulli-rgb-led-daemon start clear
     ;;
   stop)
-    echo -n "Disabling analog stick LEDs"
     # Code in here will only be executed on shutdown.
     /usr/bin/knulli-rgb-led-daemon stop
     ;;
