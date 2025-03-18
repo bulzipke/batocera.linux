@@ -17,7 +17,7 @@ diff -urN retroarch-v1.10.3/gfx/drivers/gl2.c ../../../../../dont-delete-batocer
     matrix_4x4_ortho(gl->mvp_no_rot, ortho->left, ortho->right,
           ortho->bottom, ortho->top, ortho->znear, ortho->zfar);
  
-+   matrix_4x4_rotate_z(rot, M_PI * 270 / 180.0f);
++   matrix_4x4_rotate_z(rot, M_PI * 90 / 180.0f);
 +   matrix_4x4_multiply(gl->mvp_screen_rot, rot, gl->mvp_no_rot);
 +   gl->mvp_no_rot = gl->mvp_screen_rot;
 +
@@ -34,24 +34,6 @@ diff -urN retroarch-v1.10.3/gfx/drivers/gl2.c ../../../../../dont-delete-batocer
     gl2_set_projection(gl, &default_ortho, allow_rotate);
  
     /* Set last backbuffer viewport. */
-@@ -2787,7 +2787,7 @@
-    glEnable(GL_BLEND);
- 
-    if (gl->flags & GL2_FLAG_OVERLAY_FULLSCREEN)
--      glViewport(0, 0, width, height);
-+      glViewport(0, 0, height, width);
- 
-    /* Ensure that we reset the attrib array. */
-    gl->shader->use(gl, gl->shader_data,
-@@ -2813,7 +2813,7 @@
-    gl->coords.color     = gl->white_color_ptr;
-    gl->coords.vertices  = 4;
-    if (gl->flags & GL2_FLAG_OVERLAY_FULLSCREEN)
--      glViewport(gl->vp.x, gl->vp.y, gl->vp.width, gl->vp.height);
-+      glViewport(gl->vp.y, gl->vp.x, gl->vp.height, gl->vp.width);
- }
- #endif
- 
 @@ -2465,9 +2472,10 @@
  
     if (gl->menu_texture_full_screen)
@@ -65,18 +47,34 @@ diff -urN retroarch-v1.10.3/gfx/drivers/gl2.c ../../../../../dont-delete-batocer
     }
     else
        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+diff -urN retroarch-v1.10.3/gfx/drivers/gl2.c ../../../../../dont-delete-batocera.linux/output/acm/build/retroarch-v1.10.3/gfx/drivers/gl2.c
+--- retroarch-v1.10.3/gfx/drivers/gl2.c	2022-04-11 05:17:19.000000000 +0000
++++ ../../../../../dont-delete-batocera.linux/output/acm/build/retroarch-v1.10.3/gfx/drivers/gl2.c	2022-09-12 16:40:24.744036547 +0000
+--- orig_gl2.c	2024-10-07 22:33:38.707163263 -0400
++++ gl2.c	2024-10-07 22:32:55.158220106 -0400
+@@ -515,7 +515,8 @@
+    if (!draw->coords->lut_tex_coord)
+       draw->coords->lut_tex_coord = &gl2_tex_coords[0];
+ 
+-   glViewport(draw->x, draw->y, draw->width, draw->height);
++   //glViewport(draw->x, draw->y, draw->width, draw->height);
++   glViewport(video_height - draw->y - draw->height, draw->x, draw->height, draw->width);
+    glBindTexture(GL_TEXTURE_2D, (GLuint)draw->texture);
+ 
+    gl->shader->set_coords(gl->shader_data, draw->coords);
+@@ -617,7 +618,8 @@
+       int x, int y,
+       unsigned width, unsigned height)
+ {
+-   glScissor(x, video_height - y - height, width, height);
++//   glScissor(x, video_height - y - height, width, height);
++   glScissor(video_height - y - height, x, height, width);
+    glEnable(GL_SCISSOR_TEST);
+ #ifdef MALI_BUG
+    /* TODO/FIXME: If video width/height changes between
 diff -urN retroarch-v1.10.3/gfx/drivers_shader/shader_glsl.c ../../../../../dont-delete-batocera.linux/output/acm/build/retroarch-v1.10.3/gfx/drivers_shader/shader_glsl.c
 --- retroarch-v1.10.3/gfx/drivers_shader/shader_glsl.c	2022-04-11 05:17:19.000000000 +0000
 +++ ../../../../../dont-delete-batocera.linux/output/acm/build/retroarch-v1.10.3/gfx/drivers_shader/shader_glsl.c	2022-09-12 16:40:24.744036547 +0000
-@@ -94,6 +94,8 @@
-    int frame_count;
-    int frame_direction;
- 
-+   int rotation;
-+
-    int lut_texture[GFX_MAX_TEXTURES];
-    unsigned frame_count_mod;
- 
 @@ -643,6 +645,8 @@
     uni->frame_count     = gl_glsl_get_uniform(glsl, prog, "FrameCount");
     uni->frame_direction = gl_glsl_get_uniform(glsl, prog, "FrameDirection");
@@ -98,3 +96,22 @@ diff -urN retroarch-v1.10.3/gfx/drivers_shader/shader_glsl.c ../../../../../dont
     /* Set lookup textures. */
     for (i = 0; i < glsl->shader->luts; i++)
     {
+--- a/gfx/drivers_context/mali_fbdev_ctx.c	2024-10-07 23:10:16.578829783 -0400
++++ b/gfx/drivers_context/mali_fbdev_ctx.c	2024-10-07 22:47:43.800111584 -0400
+@@ -91,11 +91,11 @@
+    close(fd);
+    fd = -1;
+ 
+-   mali->width                = vinfo.xres;
+-   mali->height               = vinfo.yres;
++   mali->width                = vinfo.yres;
++   mali->height               = vinfo.xres;
+ 
+-   mali->native_window.width  = vinfo.xres;
+-   mali->native_window.height = vinfo.yres;
++   mali->native_window.width  = vinfo.yres;
++   mali->native_window.height = vinfo.xres;
+ 
+    if (vinfo.pixclock)
+    {
+

@@ -1732,12 +1732,10 @@ Subject: [PATCH] mali-fbdev: Implemented MALI Zero-Copy fbdev rotation/scaler.
      LOAD_FUNC(eglSwapBuffers);
 --- a/src/video/SDL_egl_c.h	2023-11-02 17:03:38.000000000 +0000
 +++ b/src/video/SDL_egl_c.h	2024-04-28 18:58:49.090050243 +0000
-@@ -67,7 +67,12 @@
-                                    const EGLint * attrib_list);
-     
+@@ -68,6 +68,11 @@
+ 
      EGLBoolean(EGLAPIENTRY *eglDestroyContext) (EGLDisplay dpy, EGLContext ctx);
--    
-+
+ 
 +    EGLSurface(EGLAPIENTRY *eglCreatePixmapSurface) (EGLDisplay dpy,
 +                                         EGLConfig config,
 +                                         NativePixmapType pixmap,
@@ -1746,12 +1744,12 @@ Subject: [PATCH] mali-fbdev: Implemented MALI Zero-Copy fbdev rotation/scaler.
      EGLSurface(EGLAPIENTRY *eglCreatePbufferSurface)(EGLDisplay dpy, EGLConfig config,
                                                       EGLint const* attrib_list);
  
-@@ -76,6 +81,8 @@
-                                          NativeWindowType window,
+@@ -77,6 +82,8 @@
                                           const EGLint * attrib_list);
      EGLBoolean(EGLAPIENTRY *eglDestroySurface) (EGLDisplay dpy, EGLSurface surface);
-+
+ 
 +    EGLSurface(EGLAPIENTRY *eglGetCurrentSurface) (EGLint readdraw);
-     
++
      EGLBoolean(EGLAPIENTRY *eglMakeCurrent) (EGLDisplay dpy, EGLSurface draw,
                                   EGLSurface read, EGLContext ctx);
+ 
