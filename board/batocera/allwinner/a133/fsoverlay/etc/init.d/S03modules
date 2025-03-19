@@ -13,8 +13,11 @@ case $1 in
 		insmod /lib/modules/4.9.191/xradio_core.ko
 		insmod /lib/modules/4.9.191/xradio_wlan.ko
         fi
-        ;;
-     stop)
+	for i in /lib/modules/4.9.191/xt*; do insmod $i;done
+	insmod /lib/modules/4.9.191/ipt_REJECT.ko
+	insmod /lib/modules/4.9.191/iptable_filter.ko
+	;;
+	stop)
 	   	rmmod xradio_wlan
 		rmmod xradio_core
 		rmmod xradio_mac
