@@ -1,8 +1,7 @@
 #!/bin/bash
 
-BOARD=$(cat /boot/boot/batocera.board)
-# We only want the script to run for these devices
-if [ "$BOARD" != "rg40xx-h" ] && [ "$BOARD" != "rg40xx-v" ] && [ "$BOARD" != "rg-cubexx" ] && [ "$BOARD" != "trimui-smart-pro" ] && [ "$BOARD" != "trimui-brick" ]; then
+# We only want to run the script if the board has RGB capability
+if ! knulli-board-capability "rgb"; then
     exit 1
 fi
 

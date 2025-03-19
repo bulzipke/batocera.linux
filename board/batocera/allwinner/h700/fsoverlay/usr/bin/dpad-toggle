@@ -1,8 +1,7 @@
 #!/bin/bash
 
-BOARD=$(cat /boot/boot/batocera.board)
-# We don't want the script to run for these devices
-if [ "$BOARD" = "rg40xx-h" ] || [ "$BOARD" = "rg40xx-v" ] || [ "$BOARD" = "rg35xx-h" ] || [ "$BOARD" = "rg-cubexx" ]; then
+# We only want to run the script if the board has no analog stick capability
+if knulli-board-capability "analogstick"; then
     exit 1
 fi
 
