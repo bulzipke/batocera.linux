@@ -9,7 +9,7 @@ HAS_CAPABILITY=false
 CAPABILITY=$1
 
 if [ -z "$CAPABILITY" ]; then
-    echo "Usage: $0 <rgb|lid|hdmi|wifi|bluetooth|adb|analogstick>"
+    echo "Usage: $0 <rgb|lid|hdmi|wifi|bluetooth|analogstick>"
     exit 1
 fi
 
@@ -42,10 +42,6 @@ checkCapabilityByBoard() {
         fi
     elif [ "$CAPABILITY" = "bluetooth" ]; then
         if [ "$BOARD" = "rg35xx-plus" ] || [ "$BOARD" = "rg35xx-h" ] || [ "$BOARD" = "rg35xx-sp" ] || [ "$BOARD" = "rg40xx-h" ] || [ "$BOARD" = "rg40xx-v" ] || [ "$BOARD" = "rg-cubexx" ] || [ "$BOARD" = "trimui-smart-pro" ] || [ "$BOARD" = "trimui-brick" ]; then
-            HAS_CAPABILITY=true
-        fi
-    elif [ "$CAPABILITY" = "adb" ]; then
-        if [ "$BOARD" = "rg35xx-plus" ] || [ "$BOARD" = "rg35xx-h" ] || [ "$BOARD" = "rg35xx-2024" ] || [ "$BOARD" = "rg35xx-sp" ] || [ "$BOARD" = "rg28xx" ] || [ "$BOARD" = "rg40xx-h" ] || [ "$BOARD" = "rg40xx-v" ] || [ "$BOARD" = "rg-cubexx" ] || [ "$BOARD" = "trimui-smart-pro" ] || [ "$BOARD" = "trimui-brick" ]; then
             HAS_CAPABILITY=true
         fi
     elif [ "$CAPABILITY" = "analogstick" ]; then
