@@ -32,7 +32,9 @@ BR2_PACKAGE_MPV=y
 ######
 # Linux headers same as kernel, a 4.9 series
 BR2_LINUX_KERNEL=y
-BR2_KERNEL_HEADERS_AS_KERNEL=y
+BR2_LINUX_KERNEL_CUSTOM_GIT=y
+BR2_LINUX_KERNEL_CUSTOM_REPO_URL="https://github.com/orangepi-xunlong/linux-orangepi.git"
+BR2_LINUX_KERNEL_CUSTOM_REPO_VERSION="orange-pi-4.9-sun50iw9"
 BR2_LINUX_KERNEL_USE_CUSTOM_CONFIG=y
 BR2_LINUX_KERNEL_CUSTOM_CONFIG_FILE="$(BR2_EXTERNAL_BATOCERA_PATH)/board/batocera/allwinner/h700/linux-sunxi64-legacy.config"
 BR2_PACKAGE_HOST_LINUX_HEADERS_CUSTOM_4_9=y
