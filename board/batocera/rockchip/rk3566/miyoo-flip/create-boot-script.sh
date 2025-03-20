@@ -21,8 +21,11 @@ cp "${BINARIES_DIR}/Image"                          "${BATOCERA_BINARIES_DIR}/bo
 cp "${BINARIES_DIR}/initrd.lz4"                     "${BATOCERA_BINARIES_DIR}/boot/boot/initrd.lz4"         || exit 1
 cp "${BINARIES_DIR}/rootfs.squashfs"                "${BATOCERA_BINARIES_DIR}/boot/boot/batocera.update"    || exit 1
 
-cp "${BINARIES_DIR}/rk3566-powkiddy-x55.dtb"        "${BATOCERA_BINARIES_DIR}/boot/boot/"                   || exit 1
+# FIXME: currently copying a patched dtb
+cp "${BOARD_DIR}/rk3566-miyoo-flip.dtb"             "${BATOCERA_BINARIES_DIR}/boot/boot/"                   || exit 1
 
+# FIXME: Workaround until we have the proper mali blobs repo
+cp "${BOARD_DIR}/libmali.so.1.9.0"	            "${TARGET_DIR}/usr/lib/libMali.so"		       || exit 1
 cp "${BOARD_DIR}/boot/extlinux.conf"                "${BATOCERA_BINARIES_DIR}/boot/extlinux/"               || exit 1
 
 exit 0

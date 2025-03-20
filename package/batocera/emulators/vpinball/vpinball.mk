@@ -3,17 +3,18 @@
 # vpinball
 #
 ################################################################################
-# Version: Commits on Nov 3, 2024
-# uses standalone tree for now
-VPINBALL_VERSION = e96579ac391f029f21ab396d12b3af3633aaa46e
+VPINBALL_VERSION = v10.8.0-2051-28dd6c3
 VPINBALL_SITE = $(call github,vpinball,vpinball,$(VPINBALL_VERSION))
 VPINBALL_LICENSE = GPLv3+
 VPINBALL_LICENSE_FILES = LICENSE
-VPINBALL_DEPENDENCIES = host-libcurl libfreeimage libpinmame libaltsound libdmdutil libdof sdl2 sdl2_image sdl2_ttf ffmpeg
+VPINBALL_DEPENDENCIES = host-libcurl
+VPINBALL_DEPENDENCIES += libfreeimage libpinmame libaltsound libdmdutil libdof
+VPINBALL_DEPENDENCIES += sdl2 sdl2_image sdl2_ttf ffmpeg
+VPINBALL_EXTRACT_DEPENDENCIES = host-dos2unix
 VPINBALL_SUPPORTS_IN_SOURCE_BUILD = NO
 
 # handle supported target platforms
-ifeq ($(BR2_PACKAGE_BATOCERA_TARGET_RK3588),y)
+ifeq ($(BR2_PACKAGE_BATOCERA_TARGET_SM8250)$(BR2_PACKAGE_BATOCERA_TARGET_RK3588)$(BR2_PACKAGE_BATOCERA_TARGET_MT8395)$(BR2_PACKAGE_BATOCERA_TARGET_SAPHIRA),y)
     SOURCE = CMakeLists_gl-linux-aarch64.txt
     SOURCE_DIR = linux-aarch64
     ARCH = aarch64
@@ -33,7 +34,12 @@ ifeq ($(BR2_PACKAGE_BATOCERA_TARGET_X86_64_ANY),y)
     ARCH = x86_64
 endif
 
-define VPINBALL_CMAKE_HACKS
+define VPINBALL_FIX_LINE_ENDINGS
+    # Normalize line endings
+    cd $(@D) && find . -type f -print0 | xargs -0 $(HOST_DIR)/bin/dos2unix
+endef
+
+define VPINBALL_CUSTOM_CMAKE
     ## derived from standalone/linux/external.sh ##
     # copy linux x64
     cp $(@D)/standalone/cmake/$(SOURCE) $(@D)/CMakeLists.txt
@@ -55,6 +61,8 @@ VPINBALL_CONF_OPTS += -DPOST_BUILD_COPY_EXT_LIBS=OFF
 
 define VPINBALL_INSTALL_TARGET_CMDS
     mkdir -p $(TARGET_DIR)/usr/bin/vpinball
+    # strip binary
+    $(TARGET_STRIP) $(@D)/buildroot-build/VPinballX_GL
     # install binary
     $(INSTALL) -D -m 0755 $(@D)/buildroot-build/VPinballX_GL \
         $(TARGET_DIR)/usr/bin/vpinball
@@ -67,12 +75,13 @@ endef
 
 define VPINBALL_EVMAPY
 	mkdir -p $(TARGET_DIR)/usr/share/evmapy
-	cp $(BR2_EXTERNAL_BATOCERA_PATH)/package/batocera/emulators/vpinball/vpinball.keys \
+	cp $(BR2_EXTERNAL_REGLINUX_PATH)/package/reglinux/emulators/vpinball/vpinball.keys \
 	    $(TARGET_DIR)/usr/share/evmapy
 endef
 
-VPINBALL_PRE_CONFIGURE_HOOKS += VPINBALL_CMAKE_HACKS
+VPINBALL_PRE_CONFIGURE_HOOKS += VPINBALL_CUSTOM_CMAKE
 
+VPINBALL_POST_EXTRACT_HOOKS += VPINBALL_FIX_LINE_ENDINGS
 VPINBALL_POST_INSTALL_TARGET_HOOKS += VPINBALL_EVMAPY
 
 $(eval $(cmake-package))
