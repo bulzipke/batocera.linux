@@ -157,7 +157,9 @@ endif
 
 ifeq ($(BR2_PACKAGE_HAS_LIBMALI),y)
   ifneq ($(BR2_PACKAGE_BATOCERA_TARGET_RK3568),y)
+    ifneq ($(BR2_PACKAGE_BATOCERA_TARGET_RK3326),y)
 	RETROARCH_CONF_OPTS += --enable-mali_fbdev
+    endif
   endif
 endif
 
