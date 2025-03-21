@@ -5,18 +5,22 @@ if knulli-board-capability "analogstick"; then
     exit 1
 fi
 
-RUMBLE_FILE="/sys/class/power_supply/axp2202-battery/moto"
-DPAD_STATE_FILE="/sys/class/power_supply/axp2202-battery/nds_pwrkey"
-STATE=$(cat "$DPAD_STATE_FILE")
+DPAD_INPUT_TEMP_FOLDER="/tmp/trimui_inputd"
+DPAD_DISABLED_FILE="/tmp/trimui_inputd/input_no_dpad"
+DPAD_AS_ANALOG_FILE="/tmp/trimui_inputd/input_dpad_to_joystick"
 
-if [ "${STATE}" -eq 0 ]; then
-    echo 1 > "$RUMBLE_FILE" && sleep 0.1 && echo 0 > "$RUMBLE_FILE"
-    echo 2 > "$DPAD_STATE_FILE"
+if [[ ! -d dir ]]; then
+    mkdir "$DPAD_INPUT_TEMP_FOLDER"
+fi
+
+if [ -f "$DPAD_AS_ANALOG_FILE" ]; then
+    knulli-rgb-led-daemon animation achievement
+    rm "$DPAD_DISABLED_FILE"
+    rm "$DPAD_AS_ANALOG_FILE"
 else
-    echo 1 > "$RUMBLE_FILE" && sleep 0.1 && echo 0 > "$RUMBLE_FILE"
-    sleep 0.2
-    echo 1 > "$RUMBLE_FILE" && sleep 0.1 && echo 0 > "$RUMBLE_FILE"
-    echo 0 > "$DPAD_STATE_FILE"
+    knulli-rgb-led-daemon animation achievement
+    touch "$DPAD_DISABLED_FILE"
+    touch "$DPAD_AS_ANALOG_FILE"
 fi
 
 exit 0

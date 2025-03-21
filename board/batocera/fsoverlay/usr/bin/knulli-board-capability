@@ -45,7 +45,7 @@ checkCapabilityByBoard() {
             HAS_CAPABILITY=true
         fi
     elif [ "$CAPABILITY" = "analogstick" ]; then
-        if [ "$BOARD" = "rg35xx-h" ] || [ "$BOARD" = "rg40xx-h" ] || [ "$BOARD" = "rg40xx-v" ] || [ "$BOARD" = "rg-cubexx" ] || [ "$BOARD" = "trimui-brick" ]; then
+        if [ "$BOARD" = "rg35xx-h" ] || [ "$BOARD" = "rg40xx-h" ] || [ "$BOARD" = "rg40xx-v" ] || [ "$BOARD" = "rg-cubexx" ] || [ "$BOARD" = "trimui-smart-pro" ]; then
             HAS_CAPABILITY=true
         fi
     fi
