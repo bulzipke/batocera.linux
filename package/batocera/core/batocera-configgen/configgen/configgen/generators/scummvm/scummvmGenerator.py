@@ -49,11 +49,18 @@ class ScummVMGenerator(Generator):
           # rom is a directory: must contains a <game name>.scummvm file
           romPath = rom_path
           romName = next(rom_path.glob("*.scummvm")).stem
-        else:
+        elif rom_path.stat().st_size == 0:
+          # Legacy Batocera ScummVM file (game ID as name)
           # rom is a file: split in directory and file name
           romPath = rom_path.parent
           # Get rom name without extension
           romName = rom_path.stem
+        else:
+          # Knulli auto-generated ScummVM file with target inside:
+          # Split into directory and file content (target)
+          romName = Path(rom_path).read_text()
+          romName = romName.replace('\r', '').replace('\n', '').replace(' ', '')
+          romPath = rom_path.parent
 
         # pad number
         nplayer = 1
